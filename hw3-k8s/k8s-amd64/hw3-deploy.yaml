@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hw3-dp
+  labels:
+    app-ver: hw3-v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app-ver: hw3-v1
+  template:
+    metadata:
+      name: hw3-service
+      labels:
+        app-ver: hw3-v1
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: hw3-service
+          image: cianoid/otus-msa:hw2-20260224-v1-amd64
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000

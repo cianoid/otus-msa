@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hw3-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx-internal
+  rules:
+    - host: arch.homework
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: hw3-service-v1
+                port:
+                  number: 80
+          - path: "/otusapp/(.*)"
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: hw3-service-v1
+                port:
+                  number: 80

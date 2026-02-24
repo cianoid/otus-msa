@@ -1,0 +1,41 @@
+ hw3.postman_collection.json
+newman
+
+hw3
+
+→ Root
+  GET http://arch.homework/ [200 OK, 162B, 61ms]
+  ✓  Status code is 200
+  ✓  Response is valid JSON
+
+→ Healthcheck
+  GET http://arch.homework/health/ [200 OK, 140B, 43ms]
+  ✓  Status code is 200
+  ✓  Response is valid JSON
+  ✓  If 'status' present, it equals 'ok'
+
+→ Healthcheck Username
+  GET http://arch.homework/otusapp/igor/health/ [200 OK, 140B, 45ms]
+  ✓  Status code is 200
+  ✓  Response is valid JSON
+  ✓  If 'status' present, it equals 'ok'
+
+┌─────────────────────────┬──────────────────┬──────────────────┐
+│                         │         executed │           failed │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              iterations │                1 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│                requests │                3 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│            test-scripts │                3 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│      prerequest-scripts │                0 │                0 │
+├─────────────────────────┼──────────────────┼──────────────────┤
+│              assertions │                8 │                0 │
+├─────────────────────────┴──────────────────┴──────────────────┤
+│ total run duration: 187ms                                     │
+├───────────────────────────────────────────────────────────────┤
+│ total data received: 67B (approx)                             │
+├───────────────────────────────────────────────────────────────┤
+│ average response time: 49ms [min: 43ms, max: 61ms, s.d.: 8ms] │
+└───────────────────────────────────────────────────────────────┘

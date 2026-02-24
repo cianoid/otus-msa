@@ -1,0 +1,148 @@
+{
+	"info": {
+		"_postman_id": "8fbf9adc-08a6-4c07-a6d5-ccf73153a5c3",
+		"name": "hw3",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "18843953",
+		"_collection_link": "https://www.postman.com/veraigor/workspace/otus/collection/18843953-8fbf9adc-08a6-4c07-a6d5-ccf73153a5c3?action=share&source=collection_link&creator=18843953"
+	},
+	"item": [
+		{
+			"name": "Root",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Basic healthcheck tests",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response is valid JSON\", function () {",
+							"    pm.response.to.be.withBody;",
+							"    pm.expect(() => pm.response.json()).to.not.throw();",
+							"});",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://arch.homework/",
+					"protocol": "http",
+					"host": [
+						"arch",
+						"homework"
+					],
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Healthcheck",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Basic healthcheck tests",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response is valid JSON\", function () {",
+							"    pm.response.to.be.withBody;",
+							"    pm.expect(() => pm.response.json()).to.not.throw();",
+							"});",
+							"",
+							"pm.test(\"If 'status' present, it equals 'ok'\", function () {",
+							"    pm.expect(pm.response.json().status).to.be.oneOf([\"ok\", \"OK\"]);",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://arch.homework/health/",
+					"protocol": "http",
+					"host": [
+						"arch",
+						"homework"
+					],
+					"path": [
+						"health",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Healthcheck Username",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Basic healthcheck tests",
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response is valid JSON\", function () {",
+							"    pm.response.to.be.withBody;",
+							"    pm.expect(() => pm.response.json()).to.not.throw();",
+							"});",
+							"",
+							"pm.test(\"If 'status' present, it equals 'ok'\", function () {",
+							"    pm.expect(pm.response.json().status).to.be.oneOf([\"ok\", \"OK\"]);",
+							"});",
+							"",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://arch.homework/otusapp/igor/health/",
+					"protocol": "http",
+					"host": [
+						"arch",
+						"homework"
+					],
+					"path": [
+						"otusapp",
+						"igor",
+						"health",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
