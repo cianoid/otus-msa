@@ -18,7 +18,7 @@ spec:
       restartPolicy: Always
       containers:
         - name: hw3-service
-          image: cianoid/otus-msa:hw2-20260222-v1-amd64
+          image: cianoid/otus-msa:hw2-20260224-v1-amd64
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
