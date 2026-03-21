@@ -1,0 +1,10 @@
+fastapi==0.135.1
+uvicorn==0.42.0
+pydantic==2.12.5
+sqlalchemy==2.0.48
+asyncpg==0.31.0
+python-dotenv==1.2.2
+alembic==1.18.4
+prometheus-fastapi-instrumentator==7.1.0
+ruff==0.15.7
+greenlet==3.3.2
