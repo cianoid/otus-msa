@@ -1,0 +1,1 @@
+ruff check . --fix --line-length=120 --extend-select I
