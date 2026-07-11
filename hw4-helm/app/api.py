@@ -1,5 +1,8 @@
+import asyncio
+import random
+import math
 from fastapi import APIRouter, Depends, HTTPException
-from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_404_NOT_FOUND
+from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.crud import UserCRUD, get_user_crud
 from app.schemes import User, UserCreate, UserUpdate
@@ -58,3 +61,24 @@ async def liveness(crud: UserCRUD = Depends(get_user_crud)):
 @router.get("/readiness", status_code=HTTP_200_OK)
 async def readiness():
     return
+
+@router.get("/test")
+async def grafana_test():
+    """Test endpoint: 5% returns 500, otherwise returns 200."""
+    if random.random() < 0.05:
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Simulated error")
+
+    _range = random.randint(1_000, 4_500)
+
+
+    import time
+    start = time.perf_counter()
+    for x in range(_range):
+        for y in range(_range):
+            math.sqrt(pow(x * y, 2))
+    elapsed = round(time.perf_counter() - start, 3)
+
+    print(f"operations={_range}, elapsed {elapsed} sec")
+    
+    return {"status": "ok", "operations": _range, "elapsed": f"{elapsed} sec"}
+

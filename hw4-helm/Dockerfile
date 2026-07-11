@@ -16,8 +16,7 @@ COPY ./migrations /migrations
 COPY ./app /app
 
 ENV PATH="/.venv/bin:$PATH"
-ENTRYPOINT ["python", "-m", "app.main"]
-#CMD ["python", "-m", "app.main"]
+ENTRYPOINT ["uvicorn", "app.main:app", "--workers", "4", "--port", "8000", "--host", "0.0.0.0"]
 
-# docker push cianoid/otus-msa:hw4-20260708-v1
-# minikube image load cianoid/otus-msa:hw4-20260708-v1
+# docker build -t cianoid/otus-msa:hw4-20260711-v8 . && minikube image load cianoid/otus-msa:hw4-20260711-v8
+# docker push cianoid/otus-msa:hw4-20260711-v8

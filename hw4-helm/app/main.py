@@ -29,9 +29,25 @@ def index(req: Request) -> RedirectResponse:  # noqa: D103
 app.include_router(api_router)
 
 
-# Instrument the app with default metrics
-Instrumentator().instrument(app).expose(app)
+# 5ms - 5s
+CUSTOM_BUCKETS = [
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.075,
+    0.1,
+    0.25,
+    0.5,
+    0.75,
+    1.0,
+    2.5,
+    5.0,
+]
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+instrumentator = Instrumentator(
+    should_group_status_codes=False,             # Не группировать 2xx, 3xx
+    should_instrument_requests_inprogress=True,  # Считать запросы в обработке
+)
+
+instrumentator.instrument(app).expose(app)
