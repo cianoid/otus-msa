@@ -1,5 +1,5 @@
-import asyncio
 import random
+import time
 import math
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
@@ -13,6 +13,8 @@ router = APIRouter()
 @router.post("/users/", response_model=User, status_code=HTTP_201_CREATED)
 async def create_user(user: UserCreate, crud: UserCRUD = Depends(get_user_crud)):
     """Create a new user"""
+    if user.age < 1:
+        raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Age is not appropriate")
     return await crud.create_user(user)
 
 
@@ -68,10 +70,8 @@ async def grafana_test():
     if random.random() < 0.05:
         raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Simulated error")
 
-    _range = random.randint(1_000, 4_500)
+    _range = random.randint(300, 2_500)
 
-
-    import time
     start = time.perf_counter()
     for x in range(_range):
         for y in range(_range):
