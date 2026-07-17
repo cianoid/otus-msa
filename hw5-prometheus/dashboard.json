@@ -5,8 +5,8 @@
     "name": "ad7krhj",
     "namespace": "default",
     "uid": "4f5ae7d9-f330-4f0f-afb2-3603c7990e85",
-    "resourceVersion": "1783836841565984",
-    "generation": 20,
+    "resourceVersion": "1784320992763982",
+    "generation": 31,
     "creationTimestamp": "2026-07-11T16:01:14Z",
     "labels": {
       "grafana.app/deprecatedInternalID": "4201643413135360"
@@ -16,7 +16,7 @@
       "grafana.app/folder": "",
       "grafana.app/saved-from-ui": "Grafana v13.1.0 (b309c9bb3b)",
       "grafana.app/updatedBy": "user:dfriobs2bs2rka",
-      "grafana.app/updatedTimestamp": "2026-07-12T06:14:01Z"
+      "grafana.app/updatedTimestamp": "2026-07-17T20:43:12Z"
     }
   },
   "spec": {
@@ -48,8 +48,8 @@
         "kind": "Panel",
         "spec": {
           "id": 1,
-          "title": "HTTP Status 500 /test/",
-          "description": "",
+          "title": "Error Rate",
+          "description": "Количество ошибок в секунду за последние 5 минут",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -68,10 +68,10 @@
                       "spec": {
                         "editorMode": "builder",
                         "exemplar": false,
-                        "expr": "sum(http_requests_total{handler=\"/test\", status=\"500\", service=\"hw4-app\"})",
+                        "expr": "sum by(handler, method) (rate(http_requests_total{service=\"hw4-app\", status=~\"5.*\"}[5m]))",
                         "format": "time_series",
                         "instant": false,
-                        "legendFormat": "{{label_name}}",
+                        "legendFormat": "{{method}} {{handler}}",
                         "range": true
                       }
                     },
@@ -124,7 +124,8 @@
                     ]
                   },
                   "color": {
-                    "mode": "palette-classic"
+                    "mode": "continuous-BlYlRd",
+                    "seriesBy": "last"
                   },
                   "custom": {
                     "axisBorderShow": false,
@@ -134,22 +135,25 @@
                     "axisPlacement": "auto",
                     "barAlignment": 0,
                     "barWidthFactor": 0.6,
-                    "drawStyle": "bars",
-                    "fillOpacity": 100,
-                    "gradientMode": "hue",
+                    "drawStyle": "line",
+                    "fillOpacity": 19,
+                    "gradientMode": "scheme",
                     "hideFrom": {
                       "legend": false,
                       "tooltip": false,
                       "viz": false
                     },
                     "insertNulls": false,
-                    "lineInterpolation": "linear",
-                    "lineWidth": 1,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 2,
                     "pointSize": 5,
                     "scaleDistribution": {
                       "type": "linear"
                     },
-                    "showPoints": "auto",
+                    "showPoints": "never",
                     "showValues": false,
                     "spanNulls": false,
                     "stacking": {
@@ -167,12 +171,12 @@
           }
         }
       },
-      "panel-2": {
+      "panel-10": {
         "kind": "Panel",
         "spec": {
-          "id": 2,
-          "title": "Квантили 0.5, 0.95, 0.99",
-          "description": "",
+          "id": 10,
+          "title": "Error Rate",
+          "description": "Количество ошибок в секунду за последние 5 минут",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -190,17 +194,121 @@
                       },
                       "spec": {
                         "editorMode": "builder",
-                        "expr": "histogram_quantile(0.5, sum by(le) (rate(http_request_duration_highr_seconds_bucket{service=\"hw4-app\"}[1m])))",
+                        "exemplar": false,
+                        "expr": "sum by(ingress) (rate(nginx_ingress_controller_requests{host=\"arch.homework\", status=~\"5.*\"}[5m]))",
+                        "format": "time_series",
                         "instant": false,
-                        "interval": "",
                         "legendFormat": "__auto",
                         "range": true
                       }
                     },
-                    "refId": "C",
+                    "refId": "A",
                     "hidden": false
                   }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.1.0",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
                 },
+                "legend": {
+                  "calcs": [],
+                  "displayMode": "list",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "continuous-BlYlRd",
+                    "seriesBy": "last"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.6,
+                    "drawStyle": "line",
+                    "fillOpacity": 19,
+                    "gradientMode": "scheme",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "smooth",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 2,
+                    "pointSize": 5,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "never",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "none"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-11": {
+        "kind": "Panel",
+        "spec": {
+          "id": 11,
+          "title": "Использование RAM",
+          "description": "",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
                 {
                   "kind": "PanelQuery",
                   "spec": {
@@ -213,8 +321,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.95, sum by(le) (rate(http_request_duration_highr_seconds_bucket{service=\"hw4-app\"}[1m])))",
-                        "legendFormat": "__auto",
+                        "expr": "sum(container_memory_working_set_bytes{namespace=\"default\", pod=~\"hw4-app.*\", pod!~\"hw4-app-postgres.*\"}) ",
+                        "legendFormat": "Application",
                         "range": true
                       }
                     },
@@ -234,9 +342,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum by(le) (rate(http_request_duration_highr_seconds_bucket{service=\"hw4-app\"}[1m])))",
-                        "instant": false,
-                        "legendFormat": "__auto",
+                        "expr": "container_memory_usage_bytes{namespace=\"default\", pod=~\"hw4-app.*\", pod=~\"hw4-app-postgres.*\"}",
+                        "legendFormat": "Database",
                         "range": true
                       }
                     },
@@ -275,21 +382,28 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "unit": "bytes",
+                  "decimals": 0,
                   "thresholds": {
-                    "mode": "absolute",
+                    "mode": "percentage",
                     "steps": [
                       {
                         "value": 0,
                         "color": "green"
                       },
                       {
-                        "value": 80,
+                        "value": 50,
+                        "color": "orange"
+                      },
+                      {
+                        "value": 70,
                         "color": "red"
                       }
                     ]
                   },
                   "color": {
-                    "mode": "palette-classic"
+                    "mode": "palette-classic",
+                    "seriesBy": "max"
                   },
                   "custom": {
                     "axisBorderShow": false,
@@ -298,9 +412,9 @@
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
-                    "barWidthFactor": 0.6,
+                    "barWidthFactor": 0.9,
                     "drawStyle": "line",
-                    "fillOpacity": 25,
+                    "fillOpacity": 0,
                     "gradientMode": "none",
                     "hideFrom": {
                       "legend": false,
@@ -309,22 +423,26 @@
                     },
                     "insertNulls": false,
                     "lineInterpolation": "linear",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
                     "lineWidth": 1,
-                    "pointSize": 5,
+                    "pointSize": 1,
                     "scaleDistribution": {
                       "type": "linear"
                     },
-                    "showPoints": "auto",
+                    "showPoints": "always",
                     "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
-                      "mode": "normal"
+                      "mode": "none"
                     },
                     "thresholdsStyle": {
                       "mode": "off"
                     }
-                  }
+                  },
+                  "fieldMinMax": false
                 },
                 "overrides": []
               }
@@ -336,8 +454,8 @@
         "kind": "Panel",
         "spec": {
           "id": 3,
-          "title": "RPS /test/",
-          "description": "",
+          "title": "RPS",
+          "description": "Количество запросов в секунду за последние 5 минут",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -354,13 +472,13 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "editorMode": "builder",
+                        "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum(rate(http_requests_total{service=\"hw4-app\", handler=\"/test\", status=\"200\"}[2m]))",
+                        "expr": "sum by(handler, method) (rate(http_requests_total{service=\"hw4-app\", handler!~\"/metrics|/liveness|/readiness|/docs|/openapi.json\"}[5m]))",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
-                        "legendFormat": "__auto",
+                        "legendFormat": "{{method}} {{handler}}",
                         "range": true
                       }
                     },
@@ -384,12 +502,15 @@
                   "multiLane": false
                 },
                 "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
+                  "calcs": [
+                    "max",
+                    "last"
+                  ],
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
-                  "showLegend": false
+                  "showLegend": true
                 },
                 "tooltip": {
                   "hideZeros": false,
@@ -489,13 +610,34 @@
                         "name": "prometheus"
                       },
                       "spec": {
-                        "editorMode": "code",
-                        "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"hw4-app.*\", pod!~\"hw4-app-postgres.*\"}[1m]))",
-                        "legendFormat": "__auto",
+                        "editorMode": "builder",
+                        "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"hw4-app.*\", pod!~\"hw4-app-postgres.*\"}[5m]))",
+                        "legendFormat": "Application",
                         "range": true
                       }
                     },
                     "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"hw4-app.*\", pod=~\"hw4-app-postgres.*\"}[5m])",
+                        "legendFormat": "Database",
+                        "range": true
+                      }
+                    },
+                    "refId": "B",
                     "hidden": false
                   }
                 }
@@ -520,7 +662,7 @@
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
-                  "showLegend": false
+                  "showLegend": true
                 },
                 "tooltip": {
                   "hideZeros": false,
@@ -598,12 +740,12 @@
           }
         }
       },
-      "panel-5": {
+      "panel-7": {
         "kind": "Panel",
         "spec": {
-          "id": 5,
-          "title": "Среднее время выполнения запроса",
-          "description": "",
+          "id": 7,
+          "title": "Latency (response time)",
+          "description": "График времени ответов",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -621,12 +763,277 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum by (handler) (rate(http_request_duration_seconds_sum{handler=\"/test\"}[2m])) / sum by (handler) (rate(http_request_duration_seconds_count{handler=\"/test\"}[2m]))",
-                        "legendFormat": "__auto",
+                        "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le)) * 1000",
+                        "format": "time_series",
+                        "instant": false,
+                        "interval": "",
+                        "legendFormat": "{{method}} {{handler}} - P50 - задержка 50% самых медленных запросов, мс",
                         "range": true
                       }
                     },
                     "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
+                        "format": "time_series",
+                        "instant": false,
+                        "interval": "",
+                        "legendFormat": "{{method}} {{handler}} - P95 - задержка 5% самых медленных запросов, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
+                        "format": "time_series",
+                        "instant": false,
+                        "interval": "",
+                        "legendFormat": "{{method}} {{handler}} - P99 - задержка 1% самых медленных запросов, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "C",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "histogram_quantile(1, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
+                        "format": "time_series",
+                        "instant": false,
+                        "interval": "",
+                        "legendFormat": "{{method}} {{handler}} - Max - самые медленные запросы, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "D",
+                    "hidden": false
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "13.1.0",
+            "spec": {
+              "options": {
+                "annotations": {
+                  "clustering": -1,
+                  "multiLane": false
+                },
+                "legend": {
+                  "calcs": [
+                    "max",
+                    "last"
+                  ],
+                  "displayMode": "table",
+                  "enableFacetedFilter": false,
+                  "overflow": "ellipsis",
+                  "placement": "bottom",
+                  "showLegend": true
+                },
+                "tooltip": {
+                  "hideZeros": false,
+                  "mode": "single",
+                  "sort": "none"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "thresholds": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "value": 0,
+                        "color": "green"
+                      },
+                      {
+                        "value": 80,
+                        "color": "red"
+                      }
+                    ]
+                  },
+                  "color": {
+                    "mode": "palette-classic",
+                    "seriesBy": "max"
+                  },
+                  "custom": {
+                    "axisBorderShow": false,
+                    "axisCenteredZero": false,
+                    "axisColorMode": "text",
+                    "axisLabel": "",
+                    "axisPlacement": "auto",
+                    "barAlignment": 0,
+                    "barWidthFactor": 0.9,
+                    "drawStyle": "line",
+                    "fillOpacity": 50,
+                    "gradientMode": "none",
+                    "hideFrom": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": false
+                    },
+                    "insertNulls": false,
+                    "lineInterpolation": "linear",
+                    "lineStyle": {
+                      "fill": "solid"
+                    },
+                    "lineWidth": 2,
+                    "pointSize": 1,
+                    "scaleDistribution": {
+                      "type": "linear"
+                    },
+                    "showPoints": "always",
+                    "showValues": false,
+                    "spanNulls": false,
+                    "stacking": {
+                      "group": "A",
+                      "mode": "normal"
+                    },
+                    "thresholdsStyle": {
+                      "mode": "off"
+                    }
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "panel-8": {
+        "kind": "Panel",
+        "spec": {
+          "id": 8,
+          "title": "Latency (response time)",
+          "description": "График времени ответов",
+          "links": [],
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "histogram_quantile(0.5, sum by(le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{host=\"arch.homework\"}[5m]))) * 1000",
+                        "legendFormat": "P50 - задержка 50% самых медленных запросов, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "A",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "histogram_quantile(0.95, sum by(le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{host=\"arch.homework\"}[5m]))) * 1000",
+                        "legendFormat": "P95 - задержка 5% самых медленных запросов, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "B",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "histogram_quantile(0.99, sum by(le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{host=\"arch.homework\"}[5m]))) * 1000",
+                        "legendFormat": "P99 - задержка 1% самых медленных запросов, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "C",
+                    "hidden": false
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "prometheus"
+                      },
+                      "spec": {
+                        "editorMode": "builder",
+                        "expr": "histogram_quantile(1, sum by(le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{host=\"arch.homework\"}[5m]))) * 1000",
+                        "legendFormat": "Max - самые медленные запросы, мс",
+                        "range": true
+                      }
+                    },
+                    "refId": "D",
                     "hidden": false
                   }
                 }
@@ -675,7 +1082,8 @@
                     ]
                   },
                   "color": {
-                    "mode": "palette-classic"
+                    "mode": "palette-classic",
+                    "seriesBy": "max"
                   },
                   "custom": {
                     "axisBorderShow": false,
@@ -684,9 +1092,9 @@
                     "axisLabel": "",
                     "axisPlacement": "auto",
                     "barAlignment": 0,
-                    "barWidthFactor": 0.6,
+                    "barWidthFactor": 0.9,
                     "drawStyle": "line",
-                    "fillOpacity": 0,
+                    "fillOpacity": 50,
                     "gradientMode": "none",
                     "hideFrom": {
                       "legend": false,
@@ -695,153 +1103,25 @@
                     },
                     "insertNulls": false,
                     "lineInterpolation": "linear",
-                    "lineWidth": 1,
-                    "pointSize": 5,
-                    "scaleDistribution": {
-                      "type": "linear"
-                    },
-                    "showPoints": "auto",
-                    "showValues": false,
-                    "spanNulls": false,
-                    "stacking": {
-                      "group": "A",
-                      "mode": "none"
-                    },
-                    "thresholdsStyle": {
-                      "mode": "off"
-                    }
-                  }
-                },
-                "overrides": []
-              }
-            }
-          }
-        }
-      },
-      "panel-6": {
-        "kind": "Panel",
-        "spec": {
-          "id": 6,
-          "title": "Использование RAM",
-          "description": "",
-          "links": [],
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "query": {
-                      "kind": "DataQuery",
-                      "group": "prometheus",
-                      "version": "v0",
-                      "datasource": {
-                        "name": "prometheus"
-                      },
-                      "spec": {
-                        "editorMode": "code",
-                        "expr": "sum(container_memory_working_set_bytes{namespace=\"default\", pod=~\"hw4-app.*\", pod!~\"hw4-app-postgres.*\"})/1024/1024",
-                        "legendFormat": "__auto",
-                        "range": true
-                      }
-                    },
-                    "refId": "A",
-                    "hidden": false
-                  }
-                }
-              ],
-              "transformations": [],
-              "queryOptions": {}
-            }
-          },
-          "vizConfig": {
-            "kind": "VizConfig",
-            "group": "timeseries",
-            "version": "13.1.0",
-            "spec": {
-              "options": {
-                "annotations": {
-                  "clustering": -1,
-                  "multiLane": false
-                },
-                "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
-                  "enableFacetedFilter": false,
-                  "overflow": "ellipsis",
-                  "placement": "bottom",
-                  "showLegend": false
-                },
-                "tooltip": {
-                  "hideZeros": false,
-                  "mode": "single",
-                  "sort": "none"
-                }
-              },
-              "fieldConfig": {
-                "defaults": {
-                  "displayName": "Megabytes",
-                  "decimals": 0,
-                  "thresholds": {
-                    "mode": "percentage",
-                    "steps": [
-                      {
-                        "value": 0,
-                        "color": "green"
-                      },
-                      {
-                        "value": 50,
-                        "color": "orange"
-                      },
-                      {
-                        "value": 70,
-                        "color": "red"
-                      }
-                    ]
-                  },
-                  "color": {
-                    "mode": "continuous-GrYlRd",
-                    "seriesBy": "last"
-                  },
-                  "custom": {
-                    "axisBorderShow": false,
-                    "axisCenteredZero": false,
-                    "axisColorMode": "text",
-                    "axisLabel": "",
-                    "axisPlacement": "auto",
-                    "barAlignment": 0,
-                    "barWidthFactor": 0.6,
-                    "drawStyle": "line",
-                    "fillOpacity": 19,
-                    "gradientMode": "scheme",
-                    "hideFrom": {
-                      "legend": false,
-                      "tooltip": false,
-                      "viz": false
-                    },
-                    "insertNulls": false,
-                    "lineInterpolation": "smooth",
                     "lineStyle": {
                       "fill": "solid"
                     },
                     "lineWidth": 2,
-                    "pointSize": 5,
+                    "pointSize": 1,
                     "scaleDistribution": {
                       "type": "linear"
                     },
-                    "showPoints": "never",
+                    "showPoints": "always",
                     "showValues": false,
                     "spanNulls": false,
                     "stacking": {
                       "group": "A",
-                      "mode": "none"
+                      "mode": "normal"
                     },
                     "thresholdsStyle": {
                       "mode": "off"
                     }
-                  },
-                  "fieldMinMax": false
+                  }
                 },
                 "overrides": []
               }
@@ -849,12 +1129,12 @@
           }
         }
       },
-      "panel-7": {
+      "panel-9": {
         "kind": "Panel",
         "spec": {
-          "id": 7,
-          "title": "RPS (все эндпоинты)",
-          "description": "",
+          "id": 9,
+          "title": "RPS",
+          "description": "Количество запросов в секунду за последние 5 минут",
           "links": [],
           "data": {
             "kind": "QueryGroup",
@@ -873,11 +1153,11 @@
                       "spec": {
                         "editorMode": "builder",
                         "exemplar": false,
-                        "expr": "sum by(handler) (rate(http_requests_total{service=\"hw4-app\", status=\"200\"}[2m]))",
+                        "expr": "sum(rate(nginx_ingress_controller_requests{host=\"arch.homework\"}[5m]))",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
-                        "legendFormat": "__auto",
+                        "legendFormat": "http://arch.homework/*",
                         "range": true
                       }
                     },
@@ -901,8 +1181,11 @@
                   "multiLane": false
                 },
                 "legend": {
-                  "calcs": [],
-                  "displayMode": "list",
+                  "calcs": [
+                    "max",
+                    "last"
+                  ],
+                  "displayMode": "table",
                   "enableFacetedFilter": false,
                   "overflow": "ellipsis",
                   "placement": "bottom",
@@ -986,97 +1269,152 @@
       }
     },
     "layout": {
-      "kind": "GridLayout",
+      "kind": "RowsLayout",
       "spec": {
-        "items": [
+        "rows": [
           {
-            "kind": "GridLayoutItem",
+            "kind": "RowsLayoutRow",
             "spec": {
-              "x": 0,
-              "y": 0,
-              "width": 5,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-1"
+              "title": "Pod Metrics",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-1"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 8,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-3"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 14,
+                        "y": 0,
+                        "width": 10,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-7"
+                        }
+                      }
+                    }
+                  ]
+                }
               }
             }
           },
           {
-            "kind": "GridLayoutItem",
+            "kind": "RowsLayoutRow",
             "spec": {
-              "x": 5,
-              "y": 0,
-              "width": 9,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-3"
+              "title": "Nginx Controller Metrics",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 6,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-10"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 0,
+                        "width": 8,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-9"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 14,
+                        "y": 0,
+                        "width": 10,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-8"
+                        }
+                      }
+                    }
+                  ]
+                }
               }
             }
           },
           {
-            "kind": "GridLayoutItem",
+            "kind": "RowsLayoutRow",
             "spec": {
-              "x": 14,
-              "y": 0,
-              "width": 9,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-7"
-              }
-            }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 0,
-              "y": 9,
-              "width": 5,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-4"
-              }
-            }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 5,
-              "y": 9,
-              "width": 9,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-2"
-              }
-            }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 0,
-              "y": 18,
-              "width": 5,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-6"
-              }
-            }
-          },
-          {
-            "kind": "GridLayoutItem",
-            "spec": {
-              "x": 5,
-              "y": 18,
-              "width": 16,
-              "height": 9,
-              "element": {
-                "kind": "ElementReference",
-                "name": "panel-5"
+              "title": "Hardware Metrics",
+              "collapse": false,
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 7,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-4"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 7,
+                        "y": 0,
+                        "width": 8,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "panel-11"
+                        }
+                      }
+                    }
+                  ]
+                }
               }
             }
           }
@@ -1089,9 +1427,9 @@
     "tags": [],
     "timeSettings": {
       "timezone": "browser",
-      "from": "now-12h",
+      "from": "now-1h",
       "to": "now",
-      "autoRefresh": "30m",
+      "autoRefresh": "30s",
       "autoRefreshIntervals": [
         "5s",
         "10s",

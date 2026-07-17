@@ -1487,7 +1487,7 @@ grafana:
     ## Should be provided if Ingress is enable.
     ##
     # TODO changed
-    ingressClassName: "nginx-internal"
+    ingressClassName: "nginx"
 
     ## Annotations for Grafana Ingress
     ##
@@ -1652,7 +1652,8 @@ grafana:
   ##
   service:
     # TODO changed
-    type: LoadBalancer
+    type: NodePort
+#    type: LoadBalancer
     # TODO changed
     portName: http-web
     # TODO changed
@@ -3791,7 +3792,8 @@ prometheus:
     ## Service type
     ##
     # TODO changed
-    type: LoadBalancer
+    type: NodePort
+#    type: LoadBalancer
 
     ## Additional ports to open for Prometheus service
     ##
@@ -3947,9 +3949,10 @@ prometheus:
   #     someoneelse:$apr1$DMZX2Z4q$6SbQIfyuLQd.xmo/P0m2c.
 
   ingress:
-    enabled: false
+    enabled: true
 
-    ingressClassName: ""
+    # TODO changed
+    ingressClassName: "nginx"
 
     annotations: {}
     labels: {}
@@ -3960,14 +3963,17 @@ prometheus:
     ## Hostnames.
     ## Must be provided if Ingress is enabled.
     ##
-    # hosts:
-    #   - prometheus.domain.com
-    hosts: []
+    # TODO changed
+    hosts:
+      - prometheus.local
 
     ## Paths to use for ingress rules - one path should match the prometheusSpec.routePrefix
     ##
-    paths: []
-    # - /
+    # TODO changed
+    paths:
+      - /
+
+    # pathType: ImplementationSpecific
 
     ## For Kubernetes >= 1.18 you should specify the pathType (determines how Ingress paths should be matched)
     ## See https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/#better-path-matching-with-path-types

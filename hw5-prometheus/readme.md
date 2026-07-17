@@ -18,6 +18,12 @@ helm show values prometheus/kube-prometheus-stack > ./values.yaml
 helm upgrade --install prometheus prometheus/kube-prometheus-stack -f ./values.yaml
 ```
 
+```shell
+helm upgrade --install prometheus prometheus/kube-prometheus-stack -f ./values.yaml
+
+```
+
+
 Прописать в /etc/hosts запись
 ```shell
 127.0.0.1 grafana.local
