@@ -5,10 +5,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator, metrics as prom_metrics
 
-from app.api import router as api_router
-from app.crud import UserCRUD, get_user_crud
-from app.db import AsyncSessionLocal
-from app.logger import log
+from src.api import router as api_router
+from src.crud import UserCRUD, get_user_crud
+from src.db import AsyncSessionLocal
+from src.logger import log
 
 
 @asynccontextmanager

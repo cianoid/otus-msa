@@ -2,8 +2,8 @@ from typing import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.config import DATABASE_URL
-from app.logger import log
+from src.config import DATABASE_URL
+from src.logger import log
 
 engine = create_async_engine(
     DATABASE_URL,

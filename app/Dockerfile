@@ -13,7 +13,7 @@ RUN python -m pip install -U pip && \
 
 COPY ./alembic.ini  /
 COPY ./migrations /migrations
-COPY ./app /app
+COPY src /app
 
 ENV PATH="/.venv/bin:$PATH"
 ENTRYPOINT ["uvicorn", "app.main:app", "--workers", "4", "--port", "8000", "--host", "0.0.0.0"]

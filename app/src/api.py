@@ -4,8 +4,8 @@ import math
 from fastapi import APIRouter, Depends, HTTPException
 from starlette.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_204_NO_CONTENT, HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.crud import UserCRUD, get_user_crud
-from app.schemes import User, UserCreate, UserUpdate
+from src.crud import UserCRUD, get_user_crud
+from src.schemes import User, UserCreate, UserUpdate
 
 router = APIRouter()
 
