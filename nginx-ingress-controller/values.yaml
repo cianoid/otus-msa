@@ -1,0 +1,108 @@
+# values.yaml - рекомендуемая конфигурация для NGINX Ingress Controller (Helm)
+
+# ----------------------------
+# Основные настройки контроллера
+# ----------------------------
+
+controller:
+  # Включение метрик для Prometheus
+  metrics:
+    enabled: true
+    # Сервис для метрик (обычно не требуется менять)
+    service:
+      # Порт, на котором сервис метрик будет доступен внутри кластера
+      servicePort: 10254
+      # Можно также добавить аннотации для сервиса, если нужно (например, для Prometheus)
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "10254"
+    serviceMonitor:
+      enabled: true
+      namespace: default
+      additionalLabels:
+        release: prometheus
+
+  # Аннотации для подов контроллера – необходимы для ручного сбора Prometheus (если не используется ServiceMonitor)
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+    # Дополнительно можно указать путь, если он не /metrics
+    prometheus.io/path: "/metrics"
+
+  # Настройка сервиса контроллера (для доступа извне)
+  service:
+    # Для Minikube без MetalLB используйте NodePort.
+    # Если у вас есть MetalLB или вы в облаке, можно поменять на LoadBalancer.
+    type: LoadBalancer
+    # Можно задать конкретные порты, если нужно:
+    # nodePorts:
+    #   http: 30080
+    #   https: 30443
+
+  # Дополнительные параметры для повышения производительности и безопасности
+  config:
+    # Размер тела запроса (по умолчанию 1м)
+    proxy-body-size: "10m"
+    # Таймауты (для защиты от медленных клиентов)
+    proxy-connect-timeout: "30"
+    proxy-read-timeout: "60"
+    proxy-send-timeout: "60"
+    # Включение сжатия (gzip) – обычно полезно
+    gzip-enabled: "true"
+    gzip-types: "application/json application/javascript text/css text/plain"
+    # Настройка логов в формате JSON (удобно для сбора в ELK)
+    log-format-escape-json: "true"
+    log-format-upstream: '{"time": "$time_iso8601", "remote_addr": "$remote_addr", "x_forward_for": "$http_x_forwarded_for", "request_id": "$req_id", "remote_user": "$remote_user", "request": "$request", "status": "$status", "body_bytes_sent": "$body_bytes_sent", "request_time": "$request_time", "http_referrer": "$http_referer", "http_user_agent": "$http_user_agent", "http_x_forwarded_proto": "$http_x_forwarded_proto", "upstream_addr": "$upstream_addr", "upstream_response_time": "$upstream_response_time", "upstream_status": "$upstream_status"}'
+
+  # Настройка ресурсов (рекомендуется для production)
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Количество реплик (для отказоустойчивости)
+  replicaCount: 2
+
+# ----------------------------
+# ServiceMonitor для Prometheus Operator (если он используется)
+# ----------------------------
+# Если в кластере установлен Prometheus Operator, включите автоматическое создание ServiceMonitor
+# Это предпочтительный способ сбора метрик, вместо ручных аннотаций.
+prometheus:
+  serviceMonitor:
+    enabled: true
+    # namespace, в котором будет создан ServiceMonitor (обычно тот же, что и контроллер)
+    namespace: ingress-nginx
+    # интервал сбора
+    interval: 15s
+    # можно добавить дополнительные метки для селектора
+    # additionalLabels: {}
+    # Порт должен соответствовать имени порта в сервисе метрик
+    port: metrics
+    # Можно указать путь, если отличается
+    path: /metrics
+
+# ----------------------------
+# Настройки для TCP/UDP проброса (если требуется)
+# ----------------------------
+# tcp:
+#   6379: "default/redis-service:6379"
+# udp:
+#   53: "kube-system/kube-dns:53"
+
+# ----------------------------
+# Настройки для работы с Minikube (опционально)
+# ----------------------------
+# Если вы используете Minikube с аддоном metallb, можно указать IP-адрес для LoadBalancer
+# controller:
+#   service:
+#     type: LoadBalancer
+#     loadBalancerIP: "192.168.49.100"  # замените на ваш IP из диапазона MetalLB
+
+# ----------------------------
+# Управление CRD (обычно не требуется менять)
+# ----------------------------
+# installCRDs: true  # если вы хотите, чтобы Helm управлял CRD, но лучше оставить по умолчанию
