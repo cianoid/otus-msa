@@ -1,33 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.status import (
-    HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_401_UNAUTHORIZED,
     HTTP_409_CONFLICT,
 )
 
-from src.auth import (
+from crud import UserCRUD, get_user_crud
+from src.services.auth import (
     create_access_token,
     create_refresh_token,
-    create_user,
     decode_token,
-    get_user_by_username,
     verify_password,
 )
-from src.db import get_async_session
-from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserLogin, UserRegister
+from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserLogin, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-
 @router.post("/register", response_model=TokenPair, status_code=HTTP_201_CREATED)
-async def register(body: UserRegister, db: AsyncSession = Depends(get_async_session)):
-    existing = await get_user_by_username(db, body.username)
+async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user_crud)):
+    existing = await user_crud.get_user_by_username(user_data.username)
     if existing:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail="Username already taken")
 
-    user = await create_user(db, body.username, body.email, body.password)
+    user = await user_crud.create_user(user_data)
 
     access_token = create_access_token(user.username)
     refresh_token = create_refresh_token(user.username)
@@ -35,9 +30,9 @@ async def register(body: UserRegister, db: AsyncSession = Depends(get_async_sess
 
 
 @router.post("/login", response_model=TokenPair)
-async def login(body: UserLogin, db: AsyncSession = Depends(get_async_session)):
-    user = await get_user_by_username(db, body.username)
-    if not user or not verify_password(body.password, user.password_hash):
+async def login(user_data: UserLogin, user_crud: UserCRUD = Depends(get_user_crud)):
+    user = await user_crud.get_user_by_username(user_data.username)
+    if not user or not verify_password(user_data.password, user.password_hash):
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     access_token = create_access_token(user.username)
@@ -72,13 +67,3 @@ async def verify(body: TokenVerify):
         return TokenVerifyResponse(valid=False)
 
     return TokenVerifyResponse(valid=True, username=payload.get("sub"))
-
-
-@router.get("/liveness", status_code=HTTP_200_OK)
-async def liveness():
-    return {"status": "ok"}
-
-
-@router.get("/readiness", status_code=HTTP_200_OK)
-async def readiness():
-    return {"status": "ok"}

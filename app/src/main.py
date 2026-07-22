@@ -5,10 +5,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator, metrics as prom_metrics
 
-from src.api import router as api_router
+from src.api import auth_router, user_router, main_router
 from src.crud import UserCRUD, get_user_crud
 from src.db import AsyncSessionLocal
 from src.logger import log
+from src.core.const import CUSTOM_BUCKETS
 
 
 @asynccontextmanager
@@ -26,29 +27,9 @@ app = FastAPI(title="User Management API", description="Simple CRUD API for user
 def index(req: Request) -> RedirectResponse:  # noqa: D103
     return RedirectResponse(str(req.base_url) + "docs")
 
-app.include_router(api_router)
-
-
-# 5ms - 10s
-CUSTOM_BUCKETS = [
-    0.001,
-    0.002,
-    0.003,   # 3 мс
-    0.004,
-    0.005,   # 5 мс
-    0.01,    # 10 мс
-    0.025,   # 25 мс
-    0.05,    # 50 мс
-    0.1,     # 100 мс
-    0.25,    # 250 мс
-    0.5,     # 500 мс
-    1.0,     # 1 сек
-    1.5,     # 1.5 сек
-    2.0,     # 2 сек
-    3.0,     # 3 сек
-    5.0,     # 5 сек
-    10.0     # 10 сек
-]
+app.include_router(main_router)
+app.include_router(auth_router)
+app.include_router(user_router)
 
 instrumentator = Instrumentator(
     should_group_status_codes=False,             # Не группировать 2xx, 3xx

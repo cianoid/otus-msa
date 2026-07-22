@@ -41,3 +41,4 @@ def create_refresh_token(username: str) -> str:
 
 def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+
