@@ -1,0 +1,15 @@
+sequenceDiagram
+    actor Пользователь
+    participant AuthService / ProfileService
+    autonumber
+    title Диаграмма авторизации, обновления токена
+
+%%    Client->>AuthService / ProfileService: POST /register (username, password)
+%%    AuthService / ProfileService-->>Client: 200 OK (access_token, refresh_token)
+    Пользователь->>AuthService / ProfileService: POST /login (username, password)
+    AuthService / ProfileService-->>Пользователь: 200 OK (access_token, refresh_token)
+    Пользователь->>AuthService / ProfileService: GET /profile (Authorization: Bearer <token>)
+    AuthService / ProfileService-->>Пользователь: 200 OK (requested data)
+    Пользователь->>AuthService / ProfileService: POST /refresh (refresh_token) [optional]
+    AuthService / ProfileService-->>Пользователь: 200 OK (new access_token)
+
