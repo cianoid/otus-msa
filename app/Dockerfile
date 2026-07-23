@@ -12,11 +12,11 @@ RUN python -m pip install -U pip && \
     python -m pip install -r requirements.txt
 
 COPY ./alembic.ini  /
-COPY ./migrations /migrations
-COPY ./src /app
+COPY ./src /src
 
 ENV PATH="/.venv/bin:$PATH"
 ENTRYPOINT ["uvicorn", "src.main:app", "--workers", "4", "--port", "8000", "--host", "0.0.0.0"]
 
-# docker build -t cianoid/otus-msa:hw4-20260717-v2 . && minikube image load cianoid/otus-msa:hw4-20260717-v2
-# docker push cianoid/otus-msa:hw4-20260717-v2
+# uv export --format requirements.txt --output-file requirements.txt
+# docker build -t cianoid/otus-msa:hw6-20260723-v3 . && minikube image load cianoid/otus-msa:hw6-20260723-v3
+# docker push cianoid/otus-msa:hw6-20260722-v2

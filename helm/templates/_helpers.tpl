@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "hw4-app.name" -}}
+{{- define "app.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "hw4-app.fullname" -}}
+{{- define "app.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "hw4-app.chart" -}}
+{{- define "app.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "hw4-app.labels" -}}
-helm.sh/chart: {{ include "hw4-app.chart" . }}
-{{ include "hw4-app.selectorLabels" . }}
+{{- define "app.labels" -}}
+helm.sh/chart: {{ include "app.chart" . }}
+{{ include "app.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "hw4-app.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "hw4-app.name" . }}
+{{- define "app.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "app.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "hw4-app.serviceAccountName" -}}
+{{- define "app.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "hw4-app.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "app.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -64,21 +64,92 @@ Create the name of the service account to use
 {{/*
 Environment variables
 */}}
-{{- define "hw4-app.envs" -}}
+---
+{{- define "app-auth.name" -}}
+{{- printf "%s-auth" (include "app.name" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+---
+{{- define "app-auth.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- printf "%s-auth" .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- printf "%s-auth" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s-auth" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+---
+{{- define "app-auth.labels" -}}
+helm.sh/chart: {{ include "app.chart" . }}
+{{ include "app-auth.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+---
+{{- define "app-auth.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "app-auth.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+---
+{{- define "app-auth.envs" -}}
 env:
   - name: DB_NAME
     valueFrom:
       secretKeyRef:
-        name: {{ include "hw4-app.name" . }}-secrets
+        name: {{ include "app-auth.name" . }}-secrets
         key: DB_NAME
   - name: DB_USER
     valueFrom:
       secretKeyRef:
-        name: {{ include "hw4-app.name" . }}-secrets
+        name: {{ include "app-auth.name" . }}-secrets
         key: DB_USER
   - name: DB_PASS
     valueFrom:
       secretKeyRef:
-        name: {{ include "hw4-app.name" . }}-secrets
+        name: {{ include "app-auth.name" . }}-secrets
+        key: DB_PASS
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app-auth.name" . }}-secrets
+        key: JWT_SECRET
+  - name: ACCESS_TOKEN_EXPIRE_MINUTES
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app-auth.name" . }}-secrets
+        key: ACCESS_TOKEN_EXPIRE_MINUTES
+  - name: REFRESH_TOKEN_EXPIRE_DAYS
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app-auth.name" . }}-secrets
+        key: REFRESH_TOKEN_EXPIRE_DAYS
+{{- end -}}
+
+---
+{{- define "app.envs" -}}
+env:
+  - name: DB_NAME
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: DB_NAME
+  - name: DB_USER
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: DB_USER
+  - name: DB_PASS
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
         key: DB_PASS
 {{- end -}}

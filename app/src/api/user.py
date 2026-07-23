@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_401_UNAUTHORIZED
+from starlette.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_404_NOT_FOUND
 
-from models import UserDB
 from src.crud import UserCRUD, get_user_crud
-from src.schemes import User, UserUpdate, UserProfile
+from src.models import UserDB
+from src.schemes import User, UserProfile, UserUpdate
 from src.services.auth import decode_token
 
 router = APIRouter(prefix="/profile", tags=["profile"])

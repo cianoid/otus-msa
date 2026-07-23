@@ -1,4 +1,4 @@
-# Default values for hw4-app.
+# Default values for app.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: hw4-20260717-v2
+  tag: hw6-20260723-v3
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
@@ -92,13 +92,13 @@ postgres:
     type: NodePort
     port: 5432
   settings:
-    existingSecret: hw4-app-secrets
+    existingSecret: app-secrets
     superuser:
       secretKey: DB_USER
     superuserPassword:
       secretKey: DB_PASS
   userDatabase:
-    existingSecret: hw4-app-secrets
+    existingSecret: app-secrets
     name:
       secretKey: DB_NAME
     user:

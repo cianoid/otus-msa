@@ -5,14 +5,14 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from crud import UserCRUD, get_user_crud
+from src.crud import UserCRUD, get_user_crud
+from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
 from src.services.auth import (
     create_access_token,
     create_refresh_token,
     decode_token,
     verify_password,
 )
-from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserLogin, UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
