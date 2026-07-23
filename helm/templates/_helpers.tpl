@@ -152,4 +152,8 @@ env:
       secretKeyRef:
         name: {{ include "app.name" . }}-secrets
         key: DB_PASS
+  - name: DB_HOST
+    value: "{{ .Release.Name }}-postgres"
+  - name: DB_PORT
+    value: "5432"
 {{- end -}}
