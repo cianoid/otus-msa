@@ -17,4 +17,4 @@ ENTRYPOINT ["uvicorn", "src.main:app", "--workers", "4", "--port", "8000", "--ho
 
 # uv export --format requirements.txt --output-file requirements.txt
 # docker build -t cianoid/otus-msa:hw6-20260723-v1 . && minikube image load cianoid/otus-msa:hw6-20260723-v1
-# docker push cianoid/otus-msa:hw6-20260722-v2
+# docker push cianoid/otus-msa:hw6-20260723-v1
