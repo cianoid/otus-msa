@@ -1,9 +1,10 @@
+echo "Установка приложения"
 helm upgrade app \
-  ./helm \
+  ./chart \
   --timeout 2m \
   --debug \
   --install \
   --wait \
   --atomic \
   --namespace default \
-  --values ./helm/values.yaml
+  --values ./chart/values.yaml
