@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
-from core.logger import log
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
 from src.api import auth_router, main_router, user_router
 from src.core.const import CUSTOM_BUCKETS
+from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
 from src.db import AsyncSessionLocal
 

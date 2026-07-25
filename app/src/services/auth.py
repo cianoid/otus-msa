@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 from argon2 import PasswordHasher
-from core.config import (
+from src.core.config import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     JWT_ALGORITHM,
     JWT_SECRET,
