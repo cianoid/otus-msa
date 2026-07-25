@@ -1,0 +1,70 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant AuthApp as Auth Service
+    participant UserApp as User Service
+    participant StrategyApp as Strategy Service
+
+    rect rgb(240, 248, 255)
+        Note over User, AuthApp: Регистрация пользователя
+        User->>AuthApp: POST /register (username, password, email)
+        Note over AuthApp: Сохранение в БД
+
+        Note over AuthApp, StrategyApp: kafka: user.create
+        AuthApp-->>User: 201 Created (AT, RT)
+
+        par Обработка в User Service
+            Note over UserApp: Сохранение в БД User Service (UPSERT)
+            UserApp--)UserApp:
+        and Обработка в Strategy Service
+        Note over StrategyApp: Сохранение в БД Strategy Service (UPSERT)
+            StrategyApp--)StrategyApp:
+        end
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User, UserApp: Получение профиля
+
+        User->>UserApp: GET /profile (Bearer AT)
+        alt Пользователя нет в БД
+            Note over UserApp: Сохранение в БД мини-версии из AT (UPSERT)
+            UserApp--)UserApp:
+        end
+        UserApp-->>User: 200 Данные профиля
+
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User, UserApp: Обновление профиля
+
+        User->>UserApp: PATCH /profile (Bearer AT), (telegram, age, etc.)
+
+        alt Неуспешная валидация данных
+            UserApp-->>User: 400 Bad Request
+        else Успешная валидация данных
+            alt Пользователя нет в БД
+                Note over UserApp: Сохранение в БД мини-версии из JWT (UPSERT)
+                UserApp--)UserApp:
+            end
+            Note over UserApp: Обновление полей в БД
+            UserApp--)UserApp:
+        end
+        UserApp-->>User: 200 Данные профиля
+    end
+
+    rect rgb(240, 248, 255)
+        Note over User, AuthApp: Удаление пользователя
+        User->>AuthApp: POST /delete (Bearer AT)
+        Note over AuthApp: Удаление из БД
+
+        Note over AuthApp, StrategyApp: kafka: user.delete
+        AuthApp-->>User: 204 No content
+
+        par Обработка в User Service
+            Note over UserApp: Удаление из БД User Service
+            UserApp--)UserApp:
+        and Обработка в Strategy Service
+        Note over StrategyApp: Удаление из БД Strategy Service
+            StrategyApp--)StrategyApp:
+        end
+    end
