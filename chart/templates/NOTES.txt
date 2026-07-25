@@ -1,4 +1,4 @@
-1. Get the application URL by running these commands:
+1. Приложение доступно по ссылке:
 {{- if .Values.httpRoute.enabled }}
 {{- if .Values.httpRoute.hostnames }}
     export APP_HOSTNAME={{ .Values.httpRoute.hostnames | first }}
