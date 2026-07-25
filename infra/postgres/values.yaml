@@ -1,0 +1,35 @@
+## Database configuration (from https://groundhog2k.github.io/helm-charts/)
+postgres:
+  enabled: true
+  service:
+    type: NodePort
+    port: 5432
+  ## Custom probes — pg_isready с явным указанием БД postgres
+  customStartupProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - pg_isready -h localhost -d postgres -U ${POSTGRES_USER:-postgres}
+  customLivenessProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - pg_isready -h localhost -d postgres -U ${POSTGRES_USER:-postgres}
+  customReadinessProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - pg_isready -h localhost -d postgres -U ${POSTGRES_USER:-postgres}
+  settings:
+    authMethod: trust
+  userDatabase:
+    existingSecret: "postgres-secrets"
+    name:
+      secretKey: "DB_NAME"
+    user:
+      secretKey: "DB_USER"
+    password:
+      secretKey: "DB_PASS"

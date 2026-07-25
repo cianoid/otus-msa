@@ -1,0 +1,46 @@
+#file: noinspection ExcessiveWhitespaceTrimInspection
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "app.fullname" . }}-migrations
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      name: {{ include "app.fullname" . }}-migrations
+      labels:
+        {{- include "app.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "app.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}-migrations
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              env
+              echo "Waiting for postgres at ${DB_HOST:-postgres.postgres}:${DB_PORT:-5432}..."
+              until python -c "import socket,os,sys; s=socket.socket(); s.settimeout(3); host=os.environ.get('DB_HOST','postgres.postgres'); port=int(os.environ.get('DB_PORT','5432')); s.connect((host,port)); s.close(); sys.exit(0)" 2>/dev/null; do
+                sleep 2
+              done
+              echo "Postgres is ready, running migrations..."
+              echo "Database DSN: ${DB_USER}:***@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+              python -m alembic upgrade head
+          {{- include "app.envs" . | nindent 10 }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

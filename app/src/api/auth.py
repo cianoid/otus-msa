@@ -1,10 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException
-from starlette.status import (
-    HTTP_201_CREATED,
-    HTTP_401_UNAUTHORIZED,
-    HTTP_409_CONFLICT,
-)
-
 from src.crud import UserCRUD, get_user_crud
 from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
 from src.services.auth import (
@@ -13,8 +7,14 @@ from src.services.auth import (
     decode_token,
     verify_password,
 )
+from starlette.status import (
+    HTTP_201_CREATED,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_409_CONFLICT,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
 
 @router.post("/register", response_model=TokenPair, status_code=HTTP_201_CREATED)
 async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user_crud)):

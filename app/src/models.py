@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
+
 class UserDB(Base):
     __tablename__ = "users"
 
@@ -17,4 +18,5 @@ class UserDB(Base):
     def __repr__(self) -> str:
         return (
             f"src.models.UserDB(id={self.id}, username={self.username}, email={self.email}, "
-            f"real_name={self.real_name}, age={self.age})")
+            f"real_name={self.real_name}, age={self.age})"
+        )

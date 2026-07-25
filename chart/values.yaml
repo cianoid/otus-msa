@@ -11,7 +11,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: hw6-20260723-v1
+  tag: hw6-20260725-v1
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
@@ -84,28 +84,6 @@ serviceMonitor:
   interval: 15s
   # timeout -- Scrape timeout (optional)
   timeout: 10s
-
-## Database configuration (from https://groundhog2k.github.io/helm-charts/)
-postgres:
-  enabled: true
-  service:
-    type: NodePort
-    port: 5432
-  settings:
-    existingSecret: app-secrets
-    superuser:
-      secretKey: DB_USER
-    superuserPassword:
-      secretKey: DB_PASS
-  userDatabase:
-    existingSecret: app-secrets
-    name:
-      secretKey: DB_NAME
-    user:
-      secretKey: DB_USER
-    password:
-      secretKey: DB_PASS
-
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []

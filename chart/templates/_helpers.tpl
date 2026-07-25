@@ -61,82 +61,47 @@ Create the name of the service account to use
 {{- end }}
 {{- end }}
 
-{{/*
-Environment variables
-*/}}
----
-{{- define "app-auth.name" -}}
-{{- printf "%s-auth" (include "app.name" .) | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
----
-{{- define "app-auth.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- printf "%s-auth" .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- printf "%s-auth" .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s-auth" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
-
----
-{{- define "app-auth.labels" -}}
-helm.sh/chart: {{ include "app.chart" . }}
-{{ include "app-auth.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end }}
-
----
-{{- define "app-auth.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "app-auth.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
-
----
-{{- define "app-auth.envs" -}}
-env:
-  - name: DB_NAME
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app-auth.name" . }}-secrets
-        key: DB_NAME
-  - name: DB_USER
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app-auth.name" . }}-secrets
-        key: DB_USER
-  - name: DB_PASS
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app-auth.name" . }}-secrets
-        key: DB_PASS
-  - name: JWT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app-auth.name" . }}-secrets
-        key: JWT_SECRET
-  - name: ACCESS_TOKEN_EXPIRE_MINUTES
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app-auth.name" . }}-secrets
-        key: ACCESS_TOKEN_EXPIRE_MINUTES
-  - name: REFRESH_TOKEN_EXPIRE_DAYS
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app-auth.name" . }}-secrets
-        key: REFRESH_TOKEN_EXPIRE_DAYS
-{{- end -}}
+{{/*{{- define "app-auth.envs" -}}*/}}
+{{/*env:*/}}
+{{/*  - name: DB_NAME*/}}
+{{/*    valueFrom:*/}}
+{{/*      secretKeyRef:*/}}
+{{/*        name: {{ include "app-auth.name" . }}-secrets*/}}
+{{/*        key: DB_NAME*/}}
+{{/*  - name: DB_USER*/}}
+{{/*    valueFrom:*/}}
+{{/*      secretKeyRef:*/}}
+{{/*        name: {{ include "app-auth.name" . }}-secrets*/}}
+{{/*        key: DB_USER*/}}
+{{/*  - name: DB_PASS*/}}
+{{/*    valueFrom:*/}}
+{{/*      secretKeyRef:*/}}
+{{/*        name: {{ include "app-auth.name" . }}-secrets*/}}
+{{/*        key: DB_PASS*/}}
+{{/*  - name: JWT_SECRET*/}}
+{{/*    valueFrom:*/}}
+{{/*      secretKeyRef:*/}}
+{{/*        name: {{ include "app-auth.name" . }}-secrets*/}}
+{{/*        key: JWT_SECRET*/}}
+{{/*  - name: ACCESS_TOKEN_EXPIRE_MINUTES*/}}
+{{/*    valueFrom:*/}}
+{{/*      secretKeyRef:*/}}
+{{/*        name: {{ include "app-auth.name" . }}-secrets*/}}
+{{/*        key: ACCESS_TOKEN_EXPIRE_MINUTES*/}}
+{{/*  - name: REFRESH_TOKEN_EXPIRE_DAYS*/}}
+{{/*    valueFrom:*/}}
+{{/*      secretKeyRef:*/}}
+{{/*        name: {{ include "app-auth.name" . }}-secrets*/}}
+{{/*        key: REFRESH_TOKEN_EXPIRE_DAYS*/}}
+{{/*{{- end -}}*/}}
 
 ---
 {{- define "app.envs" -}}
 env:
+  - name: DB_HOST
+    value: "postgres.postgres"
+  - name: DB_PORT
+    value: "5432"
   - name: DB_NAME
     valueFrom:
       secretKeyRef:
@@ -152,8 +117,9 @@ env:
       secretKeyRef:
         name: {{ include "app.name" . }}-secrets
         key: DB_PASS
-  - name: DB_HOST
-    value: "{{ .Release.Name }}-postgres"
-  - name: DB_PORT
-    value: "5432"
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: JWT_SECRET
 {{- end -}}

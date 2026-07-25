@@ -2,7 +2,6 @@ import uuid
 
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
 from src.db import AsyncSessionLocal
 from src.models import UserDB
 from src.schemes import UserCreate, UserUpdate

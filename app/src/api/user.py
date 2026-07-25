@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from starlette.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_404_NOT_FOUND
-
 from src.crud import UserCRUD, get_user_crud
 from src.models import UserDB
 from src.schemes import User, UserProfile, UserUpdate
 from src.services.auth import decode_token
+from starlette.status import HTTP_200_OK, HTTP_401_UNAUTHORIZED, HTTP_404_NOT_FOUND
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 security = HTTPBearer()
@@ -27,6 +26,7 @@ async def _get_user_from_jwt(credentials: HTTPAuthorizationCredentials, user_cru
 
     return user
 
+
 @router.get("/", response_model=UserProfile, status_code=HTTP_200_OK)
 async def profile(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -43,7 +43,11 @@ async def profile(
 
 
 @router.put("/", response_model=User)
-async def update_user(user_data: UserUpdate, user_crud: UserCRUD = Depends(get_user_crud), credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def update_user(
+    user_data: UserUpdate,
+    user_crud: UserCRUD = Depends(get_user_crud),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     user = await _get_user_from_jwt(credentials, user_crud)
 
     updated_user = await user_crud.update_user(user.username, user_data)
