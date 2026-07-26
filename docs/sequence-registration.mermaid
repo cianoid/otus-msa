@@ -4,21 +4,22 @@ sequenceDiagram
     participant AuthApp as Auth Service
     participant UserApp as User Service
     participant StrategyApp as Strategy Service
+    participant PortfolioApp as Portfolio Service
 
     rect rgb(240, 248, 255)
         Note over User, AuthApp: Регистрация пользователя
         User->>AuthApp: POST /register (username, password, email)
         Note over AuthApp: Сохранение в БД
 
-        Note over AuthApp, StrategyApp: kafka: user.create
+        Note over AuthApp, PortfolioApp: kafka: user.create
         AuthApp-->>User: 201 Created (AT, RT)
 
         par Обработка в User Service
-            Note over UserApp: Сохранение в БД User Service (UPSERT)
-            UserApp--)UserApp:
+            UserApp--)UserApp: Сохранение в БД User Service (UPSERT)
         and Обработка в Strategy Service
-        Note over StrategyApp: Сохранение в БД Strategy Service (UPSERT)
-            StrategyApp--)StrategyApp:
+            StrategyApp--)StrategyApp: Сохранение в БД Strategy Service (UPSERT)
+        and Обработка в Portfolio Service
+            PortfolioApp--)PortfolioApp: Сохранение в БД Portfolio Service (UPSERT)
         end
     end
 
@@ -27,8 +28,7 @@ sequenceDiagram
 
         User->>UserApp: GET /profile (Bearer AT)
         alt Пользователя нет в БД
-            Note over UserApp: Сохранение в БД мини-версии из AT (UPSERT)
-            UserApp--)UserApp:
+            UserApp--)UserApp: Сохранение в БД мини-версии из AT (UPSERT)
         end
         UserApp-->>User: 200 Данные профиля
 
@@ -43,8 +43,7 @@ sequenceDiagram
             UserApp-->>User: 400 Bad Request
         else Успешная валидация данных
             alt Пользователя нет в БД
-                Note over UserApp: Сохранение в БД мини-версии из JWT (UPSERT)
-                UserApp--)UserApp:
+                UserApp--)UserApp: Сохранение в БД мини-версии из JWT (UPSERT)
             end
             Note over UserApp: Обновление полей в БД
             UserApp--)UserApp:
@@ -57,14 +56,17 @@ sequenceDiagram
         User->>AuthApp: POST /delete (Bearer AT)
         Note over AuthApp: Удаление из БД
 
-        Note over AuthApp, StrategyApp: kafka: user.delete
+        Note over AuthApp, PortfolioApp: kafka: user.delete
         AuthApp-->>User: 204 No content
 
         par Обработка в User Service
             Note over UserApp: Удаление из БД User Service
             UserApp--)UserApp:
         and Обработка в Strategy Service
-        Note over StrategyApp: Удаление из БД Strategy Service
+            Note over StrategyApp: Удаление из БД Strategy Service
             StrategyApp--)StrategyApp:
+        and Обработка в Portfolio Service
+            Note over PortfolioApp: Удаление из БД Portfolio Service
+            PortfolioApp--)PortfolioApp:
         end
     end

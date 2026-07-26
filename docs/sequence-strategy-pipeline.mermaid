@@ -1,0 +1,14 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant data as Data Service
+    participant pod1 as Strategy N
+    participant notify as Notification Service
+
+    rect rgb(255, 250, 240)
+        Note over data, pod1: kafka: data.$ticker.$tf
+        alt Если есть сигнал
+            Note over pod1, notify: kafka: signal
+            notify-->>User: Уведомление
+        end
+    end
