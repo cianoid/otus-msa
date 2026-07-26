@@ -5,6 +5,7 @@ sequenceDiagram
     participant UserApp as User Service
     participant StrategyApp as Strategy Service
     participant PortfolioApp as Portfolio Service
+    participant notify as Notification Service
 
     rect rgb(240, 248, 255)
         Note over User, AuthApp: Регистрация пользователя
@@ -20,6 +21,8 @@ sequenceDiagram
             StrategyApp--)StrategyApp: Сохранение в БД Strategy Service (UPSERT)
         and Обработка в Portfolio Service
             PortfolioApp--)PortfolioApp: Сохранение в БД Portfolio Service (UPSERT)
+        and Обработка в Notification Service
+            notify--)notify: Сохранение в БД Notification Service (UPSERT)
         end
     end
 
@@ -45,9 +48,14 @@ sequenceDiagram
             alt Пользователя нет в БД
                 UserApp--)UserApp: Сохранение в БД мини-версии из JWT (UPSERT)
             end
-            Note over UserApp: Обновление полей в БД
-            UserApp--)UserApp:
+            UserApp--)UserApp: Обновление полей в БД
         end
+
+        alt Если изменились контакты
+            Note over UserApp, notify: kafka: user.contact
+            Note over notify: Изменение контакта
+        end
+
         UserApp-->>User: 200 Данные профиля
     end
 
@@ -60,13 +68,12 @@ sequenceDiagram
         AuthApp-->>User: 204 No content
 
         par Обработка в User Service
-            Note over UserApp: Удаление из БД User Service
-            UserApp--)UserApp:
+            UserApp--)UserApp: Удаление из БД User Service
         and Обработка в Strategy Service
-            Note over StrategyApp: Удаление из БД Strategy Service
-            StrategyApp--)StrategyApp:
+            StrategyApp--)StrategyApp: Удаление из БД Strategy Service
         and Обработка в Portfolio Service
-            Note over PortfolioApp: Удаление из БД Portfolio Service
-            PortfolioApp--)PortfolioApp:
+            PortfolioApp--)PortfolioApp: Удаление из БД Portfolio Service
+        and Обработка в Notification Service
+            notify--)notify: Удаление из БД Notification Service
         end
     end

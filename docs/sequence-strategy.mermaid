@@ -4,6 +4,7 @@ sequenceDiagram
     participant StrategyApp as Strategy Service
     participant data as Data Service
     participant pod1 as Strategy N
+    participant notify as Notification Service
 
     rect rgb(255, 250, 240)
         Note over User, StrategyApp: Получение списка всех стратегий
@@ -24,13 +25,14 @@ sequenceDiagram
 
         User->>StrategyApp: POST /strategy/user (strategy_id, tf, ticker)
         Note over StrategyApp: Сохранение в БД
-        Note over StrategyApp, pod1: kafka: strategy_pod.create
+        Note over StrategyApp, notify: kafka: strategy_pod.create
         StrategyApp-->>User: 201 Список стратегий пользователя
         par Создание топика с данными
             data--)data: Создание топика data.$ticker.$tf
-        end
-        par Создание пода
+        and Создание пода
             pod1--)pod1: Создание пода
+        and Создание подписки на уведомления
+            notify--)notify: Создание подписки на уведомления
         end
     end
 
