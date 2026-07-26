@@ -42,11 +42,18 @@ sequenceDiagram
         User->>StrategyApp: DELETE /strategy/user (user_strategy_id)
         Note over StrategyApp: Удаление данных из БД
         StrategyApp-->>User: 201 Список стратегий пользователя
-        alt Если стратегию больше никто не использует
-            Note over StrategyApp, pod1: kafka: strategy_pod.delete
-            par Удаление пода
+
+        Note over StrategyApp, notify: kafka: strategy_pod.delete
+        par Орабаботка в Data Service
+            alt Если стратегию больше никто не использует
+                data--)data: Остановить передачу данных в data.$ticker.$tf
+            end
+        and Обработка в Strategy N
+            alt Если стратегию больше никто не использует
                 pod1--)pod1: Удаление пода
             end
+        and Обработка в Notification Service
+            notify--)notify: Удаление информации о подписке
         end
     end
 
