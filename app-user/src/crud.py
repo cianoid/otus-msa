@@ -1,10 +1,9 @@
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from schemes import UserUpdate
 from src.db import AsyncSessionLocal
 from src.models import UserDB
-from src.schemes import User
 
 
 class BaseCRUD:
@@ -25,17 +24,19 @@ class BaseCRUD:
 
 
 class UserCRUD(BaseCRUD):
-    async def get_or_update_user(self, session: AsyncSession, username: str, user_update: UserUpdate | None = None) -> UserDB:
-        user_db = UserDB(username=username)
+    async def get_or_update_user(self, username: str, user_update: UserUpdate | None = None) -> UserDB:
+        async with self.session() as session:
+            user_db = UserDB(username=username)
 
-        if user_update:
-            update_data = user_update.model_dump(exclude_unset=True)
-            for field, value in update_data.items():
-                setattr(user_db, field, value)
+            if user_update:
+                update_data = user_update.model_dump(exclude_unset=True)
+                for field, value in update_data.items():
+                    setattr(user_db, field, value)
 
-        await session.merge(user_db)
-        await session.commit()
-        return user_db
+            await session.merge(user_db)
+            await session.commit()
+            return user_db
+
 
 def get_user_crud() -> UserCRUD:
     return UserCRUD(AsyncSessionLocal)

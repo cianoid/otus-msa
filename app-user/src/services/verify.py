@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import jwt
-from src.core.config import (
-    JWT_ALGORITHM,
-    JWT_SECRET,
-)
-
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from src.core.config import (
+    JWT_ALGORITHM,
+    JWT_SECRET,
+)
 from src.core.logger import log
 
 

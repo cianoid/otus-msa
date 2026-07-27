@@ -1,4 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from starlette.status import (
+    HTTP_201_CREATED,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_409_CONFLICT,
+)
+
 from src.crud import UserCRUD, get_user_crud
 from src.kafka import send_user_created
 from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
@@ -7,11 +13,6 @@ from src.services.auth import (
     create_refresh_token,
     decode_token,
     verify_password,
-)
-from starlette.status import (
-    HTTP_201_CREATED,
-    HTTP_401_UNAUTHORIZED,
-    HTTP_409_CONFLICT,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])

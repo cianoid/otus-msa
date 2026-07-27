@@ -22,4 +22,5 @@ dependencies = [
 dev = [
     "ruff>=0.15.22",
     "pyrefly>=1.1.1",
+    "black>=26.5.1",
 ]

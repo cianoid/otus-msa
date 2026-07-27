@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
+
 from src.api import main_router, user_router
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
