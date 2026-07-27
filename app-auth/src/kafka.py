@@ -30,7 +30,7 @@ async def _get_producer() -> AIOKafkaProducer:
     return await start_producer()
 
 
-async def send_user_created(user_id: str, username: str, email: str) -> None:
+async def send_user_created(username: str, email: str) -> None:
     """Send a user.create event to Kafka.
 
     Key:   user_id (string)
@@ -38,17 +38,8 @@ async def send_user_created(user_id: str, username: str, email: str) -> None:
     """
     producer = await _get_producer()
     value = {"username": username, "email": email}
-    await producer.send_and_wait(
-        topic=KAFKA_USER_CREATE_TOPIC,
-        key=user_id,
-        value=value,
-    )
-    log.info(
-        "Sent user.create: id=%s username=%s topic=%s",
-        user_id,
-        username,
-        KAFKA_USER_CREATE_TOPIC,
-    )
+    await producer.send_and_wait(topic=KAFKA_USER_CREATE_TOPIC, key=username, value=value)
+    log.info("Sent user.create: username=%s topic=%s", username, KAFKA_USER_CREATE_TOPIC)
 
 
 async def stop_producer() -> None:

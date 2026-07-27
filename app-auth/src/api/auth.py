@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from src.crud import UserCRUD, get_user_crud
+from src.kafka import send_user_created
 from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
 from src.services.auth import (
     create_access_token,
@@ -65,13 +66,7 @@ async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user
     db_user = await user_crud.create_user(user_data)
 
     # Отправляем событие о создании пользователя в Kafka
-    from src.kafka import send_user_created
-
-    await send_user_created(
-        user_id=db_user.id,
-        username=db_user.username,
-        email=db_user.email,
-    )
+    await send_user_created(username=db_user.username, email=db_user.email)
 
     access_token = create_access_token(user_data.username)
     refresh_token = create_refresh_token(user_data.username)

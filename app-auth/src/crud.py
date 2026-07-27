@@ -28,10 +28,9 @@ class BaseCRUD:
 class UserCRUD(BaseCRUD):
     async def create_user(self, user: UserCreate) -> UserDB:
         """Create a new user"""
-        user_id = str(uuid.uuid4())
         user_data = user.model_dump()
         password_hash = hash_password(user_data.pop("password"))
-        db_user = UserDB(id=user_id, password_hash=password_hash, **user_data)
+        db_user = UserDB(password_hash=password_hash, **user_data)
 
         async with self.session() as db:
             db.add(db_user)

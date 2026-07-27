@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
-from src.api import auth_router, main_router, user_router
+from src.api import main_router, user_router
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     return
 
 
-app = FastAPI(title="User Management API", description="Simple CRUD API for user management", lifespan=lifespan)
+app = FastAPI(title="User API", lifespan=lifespan)
 
 
 @app.get(path="/", include_in_schema=False)
@@ -30,7 +30,6 @@ def index(req: Request) -> RedirectResponse:  # noqa: D103
 
 
 app.include_router(main_router)
-app.include_router(auth_router)
 app.include_router(user_router)
 
 instrumentator = Instrumentator(

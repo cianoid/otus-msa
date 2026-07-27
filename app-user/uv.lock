@@ -533,7 +533,7 @@ wheels = [
 ]
 
 [[package]]
-name = "otus-msa"
+name = "otus-user"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

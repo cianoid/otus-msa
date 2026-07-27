@@ -1,5 +1,5 @@
 [project]
-name = "otus-msa"
+name = "otus-user"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14"
