@@ -13,6 +13,9 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
 #  tag: hw6-20260725-v1
 
+kafka:
+  bootstrapServers: kafka.kafka:9092
+
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types

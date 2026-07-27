@@ -1,2 +1,2 @@
-black -l 120 .
-ruff check . --fix --line-length=120 --extend-select I
+black -l 120 app/ app-auth/
+ruff check app/ app-auth/ --fix --line-length=120 --extend-select I

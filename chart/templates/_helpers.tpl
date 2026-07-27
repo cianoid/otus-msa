@@ -122,4 +122,6 @@ env:
       secretKeyRef:
         name: {{ include "app.name" . }}-secrets
         key: JWT_SECRET
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: {{ .Values.kafka.bootstrapServers | default "kafka.kafka:9092" | quote }}
 {{- end -}}
