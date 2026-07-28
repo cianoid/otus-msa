@@ -24,16 +24,30 @@ class BaseCRUD:
 
 
 class UserCRUD(BaseCRUD):
+    async def get_or_create_user(self, username: str) -> UserDB:
+        async with self.session() as session:
+            user_db = await session.get(UserDB, username)
+
+            if user_db is None:
+                user_db = UserDB(username=username)
+                session.add(user_db)
+                await session.commit()
+
+            return user_db
+
     async def get_or_update_user(self, username: str, user_update: UserUpdate | None = None) -> UserDB:
         async with self.session() as session:
-            user_db = UserDB(username=username)
+            user_db = await session.get(UserDB, username)
+
+            if user_db is None:
+                user_db = UserDB(username=username)
+                session.add(user_db)
 
             if user_update:
                 update_data = user_update.model_dump(exclude_unset=True)
                 for field, value in update_data.items():
                     setattr(user_db, field, value)
 
-            await session.merge(user_db)
             await session.commit()
             return user_db
 

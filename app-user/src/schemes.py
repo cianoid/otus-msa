@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class UserUpdate(BaseModel):
@@ -7,12 +7,7 @@ class UserUpdate(BaseModel):
 
 class User(BaseModel):
     username: str
-    telegram: str
+    telegram: str | None = None
 
     class Config:
         from_attributes = True
-
-
-class UserProfile(BaseModel):
-    username: str = Field(min_length=3)
-    telegram: str | None
