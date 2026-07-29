@@ -1,6 +1,7 @@
 ## Database configuration (from https://groundhog2k.github.io/helm-charts/)
 postgres:
   enabled: true
+  extraScripts: "pg-init-scripts"
   service:
     type: NodePort
     port: 5432
@@ -25,11 +26,8 @@ postgres:
         - pg_isready -h localhost -d postgres -U ${POSTGRES_USER:-postgres}
   settings:
     authMethod: trust
-  userDatabase:
     existingSecret: "postgres-secrets"
-    name:
-      secretKey: "DB_NAME"
-    user:
+    superuser:
       secretKey: "DB_USER"
-    password:
+    superuserPassword:
       secretKey: "DB_PASS"

@@ -9,7 +9,9 @@ helm uninstall postgres -n postgres
 
 ```shell
 helm dependency build infra/postgres
-helm upgrade postgres infra/postgres --create-namespace --install --namespace postgres --values infra/postgres/values.yaml
+kubectl create namespace postgres
+kubectl create configmap pg-init-scripts --namespace postgres --from-file=infra/postgres/initdb.d/init.sql --dry-run=client -o yaml | kubectl apply -f -
+helm upgrade postgres infra/postgres --install --namespace postgres --values infra/postgres/values.yaml
 ```
 
 ### Получить доступ к БД
