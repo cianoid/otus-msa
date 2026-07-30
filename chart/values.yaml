@@ -14,7 +14,7 @@ image:
 #  tag: hw6-20260725-v1
 
 kafka:
-  bootstrapServers: kafka.kafka:9092
+  bootstrapServers: my-cluster-kafka-bootstrap.kafka:9092
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
@@ -73,6 +73,14 @@ autoscaling:
   maxReplicas: 6
   targetCPUUtilizationPercentage: 20
   # targetMemoryUtilizationPercentage: 80
+
+startupProbe:
+  httpGet:
+    path: /liveness
+    port: 8000
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 6
 
 # -- Prometheus ServiceMonitor configuration
 serviceMonitor:

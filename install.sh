@@ -3,9 +3,9 @@ set -euo pipefail
 
 MODE="${1:-deploy}"
 
-get_current_tag() {
+get_current_tag_auth() {
   helm get values app -n default -o json 2>/dev/null \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('image',{}).get('tag',''))" 2>/dev/null \
+    | python3 -c "import sys,json; print(json.load(sys.stdin).get('image',{}).get('tag','').get('auth',''))" 2>/dev/null \
     || true
 }
 
@@ -14,34 +14,34 @@ deploy() {
   echo "Деплой приложения с тегом ${tag}"
   helm upgrade app \
     ./chart \
-    --timeout 2m \
+    --timeout 1m \
     --install \
     --wait \
+    --debug \
     --rollback-on-failure \
     --namespace default \
     --values ./chart/values.yaml \
-    --set image.tag="${tag}"
+    --set image.tag.auth="${tag}" \
+    --set fullnameOverrideAppAuth="app-auth"
 }
 
 if [ "$MODE" = "build" ]; then
-  TAG=$(date +%Y-%m-%d-%H%M)
+  TAG_AUTH="auth-"$(date +%Y-%m-%d-%H%M)
   echo "Сборка образов"
+  echo ".. сборка cianoid/otus-msa:${TAG_AUTH}"
 
-  cd app || exit 1
-  uv export --quiet --format requirements.txt --output-file requirements.txt
-  docker build -q -t cianoid/otus-msa:"${TAG}" .
-  cd ..
+  docker build  -t cianoid/otus-msa:"${TAG_AUTH}" -f Dockerfile app-auth
 
-  echo "Загрузка образа cianoid/otus-msa:${TAG} в кубер"
-  minikube image load cianoid/otus-msa:"${TAG}"
+  echo ".. загрузка образа cianoid/otus-msa:${TAG_AUTH} в кубер"
+  minikube image load cianoid/otus-msa:"${TAG_AUTH}"
 
-  deploy "${TAG}"
+  deploy "${TAG_AUTH}"
 else
-  TAG=$(get_current_tag)
-  if [ -z "$TAG" ]; then
+  TAG_AUTH=$(get_current_tag_auth)
+  if [ -z "$TAG_AUTH" ]; then
     echo "Ошибка: не удалось определить текущий тег. Возможно, приложение ещё не было установлено."
     echo "Запустите 'install.sh build' для первой установки."
     exit 1
   fi
-  deploy "${TAG}"
+  deploy "${TAG_AUTH}"
 fi

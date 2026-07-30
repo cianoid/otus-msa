@@ -8,6 +8,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /opt/uv/uv
 
 WORKDIR /build
 
+RUN apk add --no-cache gcc musl-dev python3-dev zlib-dev
+
 # Install dependencies (layer caching: copy only lock files first)
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -26,8 +28,4 @@ WORKDIR /
 COPY ./alembic.ini  /
 COPY ./src /src
 
-ENTRYPOINT ["uvicorn", "src.main:app", "--workers", "4", "--port", "8000", "--host", "0.0.0.0"]
-
-# uv export --format requirements.txt --output-file requirements.txt
-# docker build -t cianoid/otus-msa:hw6-20260725-v1 . && minikube image load cianoid/otus-msa:hw6-20260725-v1
-# docker push cianoid/otus-msa:hw6-20260725-v1
+ENTRYPOINT ["python", "-m", "uvicorn", "src.main:app", "--workers", "4", "--port", "8000", "--host", "0.0.0.0"]

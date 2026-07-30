@@ -2,7 +2,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "app.fullname" . }}
+  name: {{ include "app-auth.fullname" . }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
     {{- with .Values.serviceMonitor.additionalLabels }}
