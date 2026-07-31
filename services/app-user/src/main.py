@@ -28,8 +28,9 @@ logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    app.dependency_overrides[get_user_crud] = UserCRUD(AsyncSessionLocal)
-    await start_consumer(AsyncSessionLocal)
+    crud = UserCRUD(AsyncSessionLocal)
+    app.dependency_overrides[get_user_crud] = crud
+    await start_consumer(crud)
     log.info("API Started")
     yield
     await stop_consumer()

@@ -6,11 +6,10 @@ import asyncio
 import json
 
 from aiokafka import AIOKafkaConsumer
-from sqlalchemy.dialects.postgresql import insert as postgres_upsert
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from src.core.config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_USER_CREATE_TOPIC, TITLE
 from src.core.logger import log
-from src.models import UserDB
+from src.crud import UserCRUD
+from src.schemes import UserUpdate
 
 _consumer: AIOKafkaConsumer | None = None
 _consumer_task: asyncio.Task[None] | None = None
@@ -19,9 +18,9 @@ _consumer_task: asyncio.Task[None] | None = None
 async def _consume_loop(
     bootstrap_servers: str,
     topic: str,
-    sessionmaker: async_sessionmaker[AsyncSession],
+    crud: UserCRUD,
 ) -> None:
-    """Internal consume loop — deserializes messages and upserts users."""
+    """Internal consume loop — deserializes messages and delegates upsert to UserCRUD."""
     consumer = AIOKafkaConsumer(
         topic,
         bootstrap_servers=bootstrap_servers,
@@ -46,25 +45,9 @@ async def _consume_loop(
                 continue
 
             try:
-                async with sessionmaker() as session:
-                    stmt = (
-                        postgres_upsert(UserDB)
-                        .values(
-                            username=username,
-                            email=email,
-                        )
-                        .on_conflict_do_update(
-                            index_elements=[UserDB.username],
-                            set_={"email": email},
-                        )
-                    )
-
-                    print(stmt)
-
-                    await session.execute(stmt)
-                    await session.commit()
-                    await consumer.commit()
-                    log.info("Upserted user: username=%s (%s)", username, "update" if msg.offset else "insert")
+                await crud.get_or_update_user(username, UserUpdate(email=email))
+                await consumer.commit()
+                log.info("Upserted user: username=%s", username)
             except Exception:
                 log.exception("Failed to upsert user: username=%s", username)
                 continue  # do not commit offset on failure
@@ -77,7 +60,7 @@ async def _consume_loop(
         log.info("Kafka consumer stopped")
 
 
-async def start_consumer(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
+async def start_consumer(crud: UserCRUD) -> None:
     """Start the Kafka consumer as a background task (idempotent)."""
     global _consumer_task
     if _consumer_task is not None and not _consumer_task.done():
@@ -88,7 +71,7 @@ async def start_consumer(sessionmaker: async_sessionmaker[AsyncSession]) -> None
         log.warning("KAFKA_BOOTSTRAP_SERVERS not configured — Kafka consumer disabled")
         return
 
-    _consumer_task = asyncio.create_task(_consume_loop(KAFKA_BOOTSTRAP_SERVERS, KAFKA_USER_CREATE_TOPIC, sessionmaker))
+    _consumer_task = asyncio.create_task(_consume_loop(KAFKA_BOOTSTRAP_SERVERS, KAFKA_USER_CREATE_TOPIC, crud))
     log.info("Kafka consumer background task launched")
 
 
