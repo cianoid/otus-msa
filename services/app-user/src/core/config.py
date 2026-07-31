@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+TITLE = os.environ.get("APP_TITLE", "App User")
 _db_user = os.environ.get("DB_USER")
 _db_pass = os.environ.get("DB_PASS")
 _db_host = os.environ.get("DB_HOST")

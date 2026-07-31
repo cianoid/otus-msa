@@ -11,6 +11,7 @@ from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
 from src.db import AsyncSessionLocal
+from src.kafka import start_consumer, stop_consumer
 
 # ── Suppress access logs for health/metrics endpoints ──────────
 _NOISELESS_PATHS = {"/liveness", "/readiness", "/metrics"}
@@ -28,8 +29,10 @@ logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     app.dependency_overrides[get_user_crud] = UserCRUD(AsyncSessionLocal)
+    await start_consumer(AsyncSessionLocal)
     log.info("API Started")
     yield
+    await stop_consumer()
     log.warning("API Stopped")
     return
 

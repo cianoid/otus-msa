@@ -14,7 +14,7 @@ async def profile(
     user_crud: UserCRUD = Depends(get_user_crud),
 ):
     user = await user_crud.get_or_create_user(payload.get("sub", ""))
-    return User(username=user.username, telegram=user.telegram)
+    return User(username=user.username, telegram=user.telegram, email=user.email)
 
 
 @router.put("", response_model=User)
@@ -24,4 +24,4 @@ async def update_user(
     user_crud: UserCRUD = Depends(get_user_crud),
 ):
     user = await user_crud.get_or_update_user(payload.get("sub", ""), user_data)
-    return User(username=user.username, telegram=user.telegram)
+    return User(username=user.username, telegram=user.telegram, email=user.email)

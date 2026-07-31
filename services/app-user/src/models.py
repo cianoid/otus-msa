@@ -8,6 +8,7 @@ class UserDB(Base):
     __tablename__ = "users"
 
     username = Column(String, primary_key=True, index=True, nullable=False)
+    email = Column(String, nullable=True)
     telegram = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
