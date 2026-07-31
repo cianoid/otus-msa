@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 
 from aiokafka import AIOKafkaProducer
-
 from src.core.config import KAFKA_BOOTSTRAP_SERVERS, KAFKA_USER_CREATE_TOPIC
 from src.core.logger import log
 
