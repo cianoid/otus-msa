@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -5,13 +6,24 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
-
 from src.api import auth_router, main_router
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
 from src.db import AsyncSessionLocal
 from src.kafka import start_producer, stop_producer
+
+# ── Suppress access logs for health/metrics endpoints ──────────
+_NOISELESS_PATHS = {"/liveness", "/readiness", "/metrics"}
+
+
+class _HealthFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not any(path in msg for path in _NOISELESS_PATHS)
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 
 
 @asynccontextmanager

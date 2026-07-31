@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends
-from starlette.status import HTTP_200_OK
-
 from src.crud import UserCRUD, get_user_crud
 from src.schemes import User, UserUpdate
 from src.services.verify import VerifyBearer
+from starlette.status import HTTP_200_OK
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 security = VerifyBearer()

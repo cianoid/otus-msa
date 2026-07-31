@@ -1,6 +1,5 @@
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
 from src.db import AsyncSessionLocal
 from src.models import UserDB
 from src.schemes import UserCreate
@@ -27,9 +26,10 @@ class BaseCRUD:
 class UserCRUD(BaseCRUD):
     async def create_user(self, user: UserCreate) -> UserDB:
         """Create a new user"""
-        user_data = user.model_dump()
-        password_hash = hash_password(user_data.pop("password"))
-        db_user = UserDB(password_hash=password_hash, **user_data)
+        db_user = UserDB(
+            username=user.username,
+            password_hash=hash_password(user.password),
+        )
 
         async with self.session() as db:
             db.add(db_user)

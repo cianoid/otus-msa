@@ -1,10 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from starlette.status import (
-    HTTP_201_CREATED,
-    HTTP_401_UNAUTHORIZED,
-    HTTP_409_CONFLICT,
-)
-
+from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
 from src.kafka import send_user_created
 from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
@@ -14,8 +9,32 @@ from src.services.auth import (
     decode_token,
     verify_password,
 )
+from starlette.status import (
+    HTTP_201_CREATED,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_409_CONFLICT,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/register", response_model=TokenPair, status_code=HTTP_201_CREATED)
+async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user_crud)):
+    existing = await user_crud.get_user_by_username(user_data.username)
+    if existing:
+        raise HTTPException(status_code=HTTP_409_CONFLICT, detail="Username already taken")
+
+    try:
+        await user_crud.create_user(user_data)
+    except Exception as err:
+        log.critical("%s: Error during user save", str(err), exc_info=True)
+
+    # Отправляем событие о создании пользователя в Kafka
+    await send_user_created(username=user_data.username, email=user_data.email)
+
+    access_token = create_access_token(user_data.username)
+    refresh_token = create_refresh_token(user_data.username)
+    return TokenPair(access_token=access_token, refresh_token=refresh_token)
 
 
 @router.post("/login", response_model=TokenPair)
@@ -56,19 +75,3 @@ async def verify(body: TokenVerify):
         return TokenVerifyResponse(valid=False)
 
     return TokenVerifyResponse(valid=True, username=payload.get("sub"))
-
-
-@router.post("/register", response_model=TokenPair, status_code=HTTP_201_CREATED)
-async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user_crud)):
-    existing = await user_crud.get_user_by_username(user_data.username)
-    if existing:
-        raise HTTPException(status_code=HTTP_409_CONFLICT, detail="Username already taken")
-
-    db_user = await user_crud.create_user(user_data)
-
-    # Отправляем событие о создании пользователя в Kafka
-    await send_user_created(username=db_user.username, email=db_user.email)
-
-    access_token = create_access_token(user_data.username)
-    refresh_token = create_refresh_token(user_data.username)
-    return TokenPair(access_token=access_token, refresh_token=refresh_token)

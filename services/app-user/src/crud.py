@@ -1,9 +1,8 @@
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-
-from schemes import UserUpdate
 from src.db import AsyncSessionLocal
 from src.models import UserDB
+from src.schemes import UserUpdate
 
 
 class BaseCRUD:
