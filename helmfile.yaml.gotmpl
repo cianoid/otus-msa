@@ -1,0 +1,18 @@
+releases:
+  - name: app-auth
+    namespace: default
+    chart: ./charts/chart-app-auth
+    values:
+      - ./charts/chart-app-auth/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_auth.image.tag | default "fallback" }}
+
+  - name: app-user
+    namespace: default
+    chart: ./charts/chart-app-user
+    values:
+      - ./charts/chart-app-user/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_user.image.tag | default "fallback" }}

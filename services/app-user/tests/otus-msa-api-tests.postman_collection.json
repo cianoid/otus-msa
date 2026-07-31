@@ -1,0 +1,746 @@
+{
+  "info": {
+    "name": "OTUS MSA User API Tests",
+    "description": "Коллекция тестов для OTUS MSA User Management API.\n\nСценарий:\n  1. Регистрация пользователя 1\n  2. Проверка, что изменение и получение профиля недоступно без логина\n  3. Вход пользователя 1\n  4. Изменение профиля пользователя 1\n  5. Проверка, что профиль поменялся\n  6. Выход — эндпоинт отсутствует в API (пропущен)\n  7. Регистрация пользователя 2\n  8. Вход пользователя 2\n  9. Проверка, что пользователь 2 не имеет доступа на чтение и редактирование профиля пользователя 1\n\nЗапуск через newman:\n  newman run otus-msa-api-tests.postman_collection.json --verbose",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://arch.homework",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. User 1 — Registration & Auth",
+      "description": "Регистрация первого пользователя со случайными данными и проверка недоступности профиля без аутентификации.",
+      "item": [
+        {
+          "name": "1.1 Register User 1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// ── Генерация случайных данных для User 1 ──",
+                  "const suffix = Math.random().toString(36).substring(2, 8);",
+                  "pm.collectionVariables.set('user1_username', 'user1_' + suffix);",
+                  "pm.collectionVariables.set('user1_password', 'Pass' + suffix + '!1');",
+                  "pm.collectionVariables.set('user1_email', 'user1_' + suffix + '@example.com');",
+                  "pm.collectionVariables.set('user1_age', String(Math.floor(Math.random() * 40) + 18));",
+                  "pm.collectionVariables.set('user1_real_name', 'User One ' + suffix);",
+                  "",
+                  "console.log('>>> [REGISTER USER1] Данные запроса:');",
+                  "console.log('  username :', pm.collectionVariables.get('user1_username'));",
+                  "console.log('  email    :', pm.collectionVariables.get('user1_email'));",
+                  "console.log('  password :', pm.collectionVariables.get('user1_password'));",
+                  "console.log('  age      :', pm.collectionVariables.get('user1_age'));",
+                  "console.log('  real_name:', pm.collectionVariables.get('user1_real_name'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [REGISTER USER1] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has access_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('access_token');",
+                  "    pm.expect(json.access_token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('user1_token', json.access_token);",
+                  "});",
+                  "",
+                  "pm.test('Response has refresh_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('refresh_token');",
+                  "    pm.collectionVariables.set('user1_refresh_token', json.refresh_token);",
+                  "});",
+                  "",
+                  "pm.test('token_type is bearer', function () {",
+                  "    pm.expect(pm.response.json().token_type).to.eql('bearer');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{user1_username}}\",\"email\":\"{{user1_email}}\",\"password\":\"{{user1_password}}\",\"age\":{{user1_age}},\"real_name\":\"{{user1_real_name}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 GET /profile/ — без авторизации (ожидаем 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [GET /profile/ NO AUTH] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 401 (Forbidden — no credentials)', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 PUT /profile/ — без авторизации (ожидаем 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [PUT /profile/ NO AUTH] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 401 (Forbidden — no credentials)', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"real_name\":\"Hacker Attempt\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Login User 1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "console.log('>>> [LOGIN USER1] Данные запроса:');",
+                  "console.log('  username:', pm.collectionVariables.get('user1_username'));",
+                  "console.log('  password:', pm.collectionVariables.get('user1_password'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [LOGIN USER1] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Login returns access_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('access_token');",
+                  "    pm.expect(json.access_token).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set('user1_token', json.access_token);",
+                  "});",
+                  "",
+                  "pm.test('Login returns refresh_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('refresh_token');",
+                  "    pm.collectionVariables.set('user1_refresh_token', json.refresh_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{user1_username}}\",\"password\":\"{{user1_password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. User 1 — Profile Operations",
+      "description": "Получение, изменение и верификация профиля пользователя 1.",
+      "item": [
+        {
+          "name": "2.1 GET User 1 Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [GET USER1 PROFILE] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Profile username matches registered user', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.username).to.eql(pm.collectionVariables.get('user1_username'));",
+                  "});",
+                  "",
+                  "pm.test('Profile email matches registered user', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('user1_email'));",
+                  "});",
+                  "",
+                  "pm.test('Profile age matches registered user', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.age)).to.eql(pm.collectionVariables.get('user1_age'));",
+                  "});",
+                  "",
+                  "pm.test('Profile real_name matches registered user', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.real_name).to.eql(pm.collectionVariables.get('user1_real_name'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user1_token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 PUT Update User 1 Profile",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Генерируем новые данные для обновления",
+                  "const suffix = Math.random().toString(36).substring(2, 6);",
+                  "pm.collectionVariables.set('user1_new_email', 'updated_' + suffix + '@example.com');",
+                  "pm.collectionVariables.set('user1_new_age', String(Math.floor(Math.random() * 30) + 25));",
+                  "pm.collectionVariables.set('user1_new_real_name', 'Updated User ' + suffix);",
+                  "",
+                  "console.log('>>> [UPDATE USER1] Новые данные:');",
+                  "console.log('  email    :', pm.collectionVariables.get('user1_new_email'));",
+                  "console.log('  age      :', pm.collectionVariables.get('user1_new_age'));",
+                  "console.log('  real_name:', pm.collectionVariables.get('user1_new_real_name'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [UPDATE USER1] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Updated profile reflects new email', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('user1_new_email'));",
+                  "});",
+                  "",
+                  "pm.test('Updated profile reflects new age', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.age)).to.eql(pm.collectionVariables.get('user1_new_age'));",
+                  "});",
+                  "",
+                  "pm.test('Updated profile reflects new real_name', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.real_name).to.eql(pm.collectionVariables.get('user1_new_real_name'));",
+                  "});",
+                  "",
+                  "pm.test('Username remains unchanged after update', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.username).to.eql(pm.collectionVariables.get('user1_username'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user1_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{user1_new_email}}\",\"age\":{{user1_new_age}},\"real_name\":\"{{user1_new_real_name}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 GET Verify Profile Changed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [VERIFY USER1 CHANGES] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('GET confirms updated email', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('user1_new_email'));",
+                  "});",
+                  "",
+                  "pm.test('GET confirms updated age', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.age)).to.eql(pm.collectionVariables.get('user1_new_age'));",
+                  "});",
+                  "",
+                  "pm.test('GET confirms updated real_name', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.real_name).to.eql(pm.collectionVariables.get('user1_new_real_name'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user1_token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. User 2 & Cross-User Isolation",
+      "description": "Регистрация второго пользователя и проверка, что он не может читать или изменять профиль пользователя 1. Так как API не поддерживает запрос чужого профиля по id (GET/PUT /profile/ всегда возвращает данные владельца токена), изоляция проверяется косвенно: после действий пользователя 2 профиль пользователя 1 остаётся неизменным.",
+      "item": [
+        {
+          "name": "3.1 Register User 2",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const suffix = Math.random().toString(36).substring(2, 8);",
+                  "pm.collectionVariables.set('user2_username', 'user2_' + suffix);",
+                  "pm.collectionVariables.set('user2_password', 'Pass' + suffix + '!2');",
+                  "pm.collectionVariables.set('user2_email', 'user2_' + suffix + '@example.com');",
+                  "pm.collectionVariables.set('user2_age', String(Math.floor(Math.random() * 40) + 18));",
+                  "pm.collectionVariables.set('user2_real_name', 'User Two ' + suffix);",
+                  "",
+                  "console.log('>>> [REGISTER USER2] Данные запроса:');",
+                  "console.log('  username :', pm.collectionVariables.get('user2_username'));",
+                  "console.log('  email    :', pm.collectionVariables.get('user2_email'));",
+                  "console.log('  password :', pm.collectionVariables.get('user2_password'));",
+                  "console.log('  age      :', pm.collectionVariables.get('user2_age'));",
+                  "console.log('  real_name:', pm.collectionVariables.get('user2_real_name'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [REGISTER USER2] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has access_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('access_token');",
+                  "    pm.collectionVariables.set('user2_token', json.access_token);",
+                  "});",
+                  "",
+                  "pm.test('Response has refresh_token', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('refresh_token');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{user2_username}}\",\"email\":\"{{user2_email}}\",\"password\":\"{{user2_password}}\",\"age\":{{user2_age}},\"real_name\":\"{{user2_real_name}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Login User 2",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "console.log('>>> [LOGIN USER2] Данные запроса:');",
+                  "console.log('  username:', pm.collectionVariables.get('user2_username'));",
+                  "console.log('  password:', pm.collectionVariables.get('user2_password'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [LOGIN USER2] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Login returns access_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('access_token');",
+                  "    pm.collectionVariables.set('user2_token', json.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{user2_username}}\",\"password\":\"{{user2_password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 GET /profile/ as User 2 — returns User 2 data, NOT User 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [USER2 GETS OWN PROFILE] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Returns User 2 username, NOT User 1', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.username).to.eql(pm.collectionVariables.get('user2_username'));",
+                  "    pm.expect(json.username).to.not.eql(pm.collectionVariables.get('user1_username'));",
+                  "});",
+                  "",
+                  "pm.test('Returns User 2 email, NOT User 1', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('user2_email'));",
+                  "    pm.expect(json.email).to.not.eql(pm.collectionVariables.get('user1_new_email'));",
+                  "});",
+                  "",
+                  "pm.test('Returns User 2 real_name, NOT User 1', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.real_name).to.eql(pm.collectionVariables.get('user2_real_name'));",
+                  "    pm.expect(json.real_name).to.not.eql(pm.collectionVariables.get('user1_new_real_name'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user2_token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 PUT /profile/ as User 2 — updates User 2, NOT User 1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Attempt to set User 1's real_name — should be ignored;",
+                  "// User 2's own profile gets updated instead.",
+                  "const suffix = Math.random().toString(36).substring(2, 6);",
+                  "pm.collectionVariables.set('user2_new_real_name', 'User2 Updated ' + suffix);",
+                  "",
+                  "console.log('>>> [USER2 UPDATE ATTEMPT] Данные запроса:');",
+                  "console.log('  real_name:', pm.collectionVariables.get('user2_new_real_name'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [USER2 UPDATE ATTEMPT] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('PUT updates User 2 profile, not User 1', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.username).to.eql(pm.collectionVariables.get('user2_username'));",
+                  "    pm.expect(json.username).to.not.eql(pm.collectionVariables.get('user1_username'));",
+                  "    pm.expect(json.real_name).to.eql(pm.collectionVariables.get('user2_new_real_name'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user2_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"real_name\":\"{{user2_new_real_name}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 Login User 1 and verify profile unchanged",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "console.log('>>> [RE-LOGIN USER1] Данные запроса:');",
+                  "console.log('  username:', pm.collectionVariables.get('user1_username'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [RE-LOGIN USER1] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Login returns valid access_token', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('access_token');",
+                  "    pm.collectionVariables.set('user1_token', json.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"{{user1_username}}\",\"password\":\"{{user1_password}}\"}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 GET User 1 Profile — confirms isolation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('<<< [FINAL USER1 PROFILE CHECK] Ответ:');",
+                  "console.log('  Status:', pm.response.code);",
+                  "try { console.log('  Body  :', JSON.stringify(pm.response.json(), null, 2)); } catch(e) { console.log('  Body  :', pm.response.text()); }",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('User 1 profile still has updated email — unchanged by User 2', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.email).to.eql(pm.collectionVariables.get('user1_new_email'));",
+                  "});",
+                  "",
+                  "pm.test('User 1 profile still has updated real_name — unchanged by User 2', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.real_name).to.eql(pm.collectionVariables.get('user1_new_real_name'));",
+                  "});",
+                  "",
+                  "pm.test('User 1 profile still has updated age — unchanged by User 2', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.age)).to.eql(pm.collectionVariables.get('user1_new_age'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user1_token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile/",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile", ""]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

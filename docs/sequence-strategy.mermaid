@@ -1,0 +1,65 @@
+sequenceDiagram
+    autonumber
+    actor User
+    participant StrategyApp as Strategy Service
+    participant data as Data Service
+    participant pod1 as Strategy N
+    participant notify as Notification Service
+
+    rect rgb(255, 250, 240)
+        Note over User, StrategyApp: Получение списка всех стратегий
+
+        User->>StrategyApp: GET /strategy
+        StrategyApp-->>User: 200 Список стратегий
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User, data: Получение списка всех тикеров
+
+        User->>data: GET /ticker
+        data-->>User: 200 Список тикеров
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User, StrategyApp: Добавление стратегии в портфель
+
+        User->>StrategyApp: POST /strategy/user (strategy_id, tf, ticker)
+        Note over StrategyApp: Сохранение в БД
+        Note over StrategyApp, notify: kafka: strategy_pod.create
+        StrategyApp-->>User: 201 Список стратегий пользователя
+        par Создание топика с данными
+            data--)data: Создание топика data.$ticker.$tf
+        and Создание пода
+            pod1--)pod1: Создание пода
+        and Создание подписки на уведомления
+            notify--)notify: Создание подписки на уведомления
+        end
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User, StrategyApp: Удаление стратегии из портфеля
+
+        User->>StrategyApp: DELETE /strategy/user (user_strategy_id)
+        Note over StrategyApp: Удаление данных из БД
+        StrategyApp-->>User: 201 Список стратегий пользователя
+
+        Note over StrategyApp, notify: kafka: strategy_pod.delete
+        par Орабаботка в Data Service
+            alt Если стратегию больше никто не использует
+                data--)data: Остановить передачу данных в data.$ticker.$tf
+            end
+        and Обработка в Strategy N
+            alt Если стратегию больше никто не использует
+                pod1--)pod1: Удаление пода
+            end
+        and Обработка в Notification Service
+            notify--)notify: Удаление информации о подписке
+        end
+    end
+
+    rect rgb(255, 250, 240)
+        Note over User, StrategyApp: Получение списка стратегий пользователя
+
+        User->>StrategyApp: GET /strategy/user
+        StrategyApp-->>User: 200 Список стратегий пользователя
+    end
