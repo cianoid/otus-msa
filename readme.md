@@ -62,5 +62,8 @@ kubectl delete namespace kafka
 
 ## Установка приложения
 ```shell
+# если изменился код
 ./install.sh build
+# если изменился только манифест
+./install.sh
 ```
