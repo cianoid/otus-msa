@@ -1,5 +1,5 @@
 apiVersion: v2
-name: romashka
+name: app-auth
 description: A Helm chart for Kubernetes (APP)
 
 # A chart can be either an 'application' or a 'library' chart.

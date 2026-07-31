@@ -3,45 +3,50 @@ set -euo pipefail
 
 MODE="${1:-deploy}"
 
-get_current_tag_auth() {
-  helm get values app -n default -o json 2>/dev/null \
-    | python3 -c "import sys,json; print(json.load(sys.stdin).get('image',{}).get('tag','').get('auth',''))" 2>/dev/null \
-    || true
+get_current_tag() {
+  app_name="$1"
+  helm get values "${app_name}" -n default -o json | jq '.image.tag'
 }
 
 deploy() {
-  local tag="$1"
-  echo "Деплой приложения с тегом ${tag}"
-  helm upgrade app \
-    ./chart \
-    --timeout 1m \
-    --install \
-    --wait \
-    --debug \
-    --rollback-on-failure \
-    --namespace default \
-    --values ./chart/values.yaml \
-    --set image.tag.auth="${tag}" \
-    --set fullnameOverrideAppAuth="app-auth"
+  local tag_auth="$1"
+  local tag_user="$2"
+
+  echo "Деплой приложений: ${tag_user}, ${tag_auth}"
+  helmfile \
+    --state-values-set app_auth.image.tag="${tag_auth}" \
+    --state-values-set app_user.image.tag="${tag_user}" \
+    sync
 }
 
 if [ "$MODE" = "build" ]; then
   TAG_AUTH="auth-"$(date +%Y-%m-%d-%H%M)
+  TAG_USER="user-"$(date +%Y-%m-%d-%H%M)
+
   echo "Сборка образов"
   echo ".. сборка cianoid/otus-msa:${TAG_AUTH}"
-
-  docker build  -t cianoid/otus-msa:"${TAG_AUTH}" -f Dockerfile app-auth
+  docker build -q -t cianoid/otus-msa:"${TAG_AUTH}" -f services/Dockerfile services/app-auth
+  echo ".. сборка cianoid/otus-msa:${TAG_USER}"
+  docker build -q -t cianoid/otus-msa:"${TAG_USER}" -f services/Dockerfile services/app-user
 
   echo ".. загрузка образа cianoid/otus-msa:${TAG_AUTH} в кубер"
   minikube image load cianoid/otus-msa:"${TAG_AUTH}"
+  echo ".. загрузка образа cianoid/otus-msa:${TAG_USER} в кубер"
+  minikube image load cianoid/otus-msa:"${TAG_USER}"
 
-  deploy "${TAG_AUTH}"
+  deploy "${TAG_AUTH}" "${TAG_USER}"
 else
-  TAG_AUTH=$(get_current_tag_auth)
+  TAG_AUTH=$(get_current_tag "app-auth")
+  TAG_USER=$(get_current_tag "app-user")
   if [ -z "$TAG_AUTH" ]; then
     echo "Ошибка: не удалось определить текущий тег. Возможно, приложение ещё не было установлено."
     echo "Запустите 'install.sh build' для первой установки."
     exit 1
   fi
-  deploy "${TAG_AUTH}"
+  if [ -z "$TAG_USER" ]; then
+    echo "Ошибка: не удалось определить текущий тег. Возможно, приложение ещё не было установлено."
+    echo "Запустите 'install.sh build' для первой установки."
+    exit 1
+  fi
+  deploy "${TAG_AUTH}" "${TAG_USER}"
 fi

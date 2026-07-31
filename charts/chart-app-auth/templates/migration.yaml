@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "app-auth.fullname" . }}-migrations
+  name: {{ include "app.fullname" . }}-migrations
   labels:
     {{- include "app.labels" . | nindent 4 }}
   annotations:
@@ -13,7 +13,7 @@ spec:
   ttlSecondsAfterFinished: 300
   template:
     metadata:
-      name: {{ include "app-auth.fullname" . }}-migrations
+      name: {{ include "app.fullname" . }}-migrations
       labels:
         {{- include "app.selectorLabels" . | nindent 8 }}
     spec:
@@ -25,7 +25,7 @@ spec:
       serviceAccountName: {{ include "app.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}-migrations
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag.auth | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
             - sh
@@ -39,7 +39,7 @@ spec:
               echo "Postgres is ready, running migrations..."
               echo "Database DSN: ${DB_USER}:***@${DB_HOST}:${DB_PORT}/${DB_NAME}"
               python -m alembic upgrade head
-          {{- include "app-auth.envs" . | nindent 10 }}
+          {{- include "app.envs" . | nindent 10 }}
           {{- with .Values.resources }}
           resources:
             {{- toYaml . | nindent 12 }}

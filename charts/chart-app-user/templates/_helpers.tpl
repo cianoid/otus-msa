@@ -10,9 +10,9 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "app-auth.fullname" -}}
-{{- if .Values.fullnameOverrideAppAuth }}
-{{- .Values.fullnameOverrideAppAuth | trunc 63 | trimSuffix "-" }}
+{{- define "app.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- $name := default .Chart.Name .Values.nameOverride }}
 {{- if contains $name .Release.Name }}
@@ -55,15 +55,14 @@ Create the name of the service account to use
 */}}
 {{- define "app.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "app-auth.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "app.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
 
-
 ---
-{{- define "app-user.envs" -}}
+{{- define "app.envs" -}}
 env:
   - name: DB_HOST
     value: "postgres.postgres"
@@ -71,34 +70,6 @@ env:
     value: "5432"
   - name: DB_NAME
     value: "app_user"
-  - name: DB_USER
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app.name" . }}-secrets
-        key: DB_USER
-  - name: DB_PASS
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app.name" . }}-secrets
-        key: DB_PASS
-  - name: JWT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: {{ include "app.name" . }}-secrets
-        key: JWT_SECRET
-  - name: KAFKA_BOOTSTRAP_SERVERS
-    value: {{ .Values.kafka.bootstrapServers | default "kafka.kafka:9092" | quote }}
-{{- end -}}
-
----
-{{- define "app-auth.envs" -}}
-env:
-  - name: DB_HOST
-    value: "postgres.postgres"
-  - name: DB_PORT
-    value: "5432"
-  - name: DB_NAME
-    value: "app_auth"
   - name: DB_USER
     valueFrom:
       secretKeyRef:

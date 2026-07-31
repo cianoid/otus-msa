@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "app-auth.fullname" . }}
+  name: {{ include "app.fullname" . }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
 spec:
@@ -39,9 +39,9 @@ spec:
           securityContext:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag.auth | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{- include "app-auth.envs" . | nindent 10 }}
+          {{- include "app.envs" . | nindent 10 }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
@@ -52,6 +52,10 @@ spec:
           {{- end }}
           {{- with .Values.readinessProbe }}
           readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           {{- with .Values.resources }}
