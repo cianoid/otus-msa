@@ -68,7 +68,7 @@
                       "spec": {
                         "editorMode": "builder",
                         "exemplar": false,
-                        "expr": "sum by(handler, method) (rate(http_requests_total{service=\"hw4-app\", status=~\"5.*\"}[5m]))",
+                        "expr": "sum by(handler, method) (rate(http_requests_total{status=~\"5.*\"}[5m]))",
                         "format": "time_series",
                         "instant": false,
                         "legendFormat": "{{method}} {{handler}}",
@@ -321,7 +321,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "sum(container_memory_working_set_bytes{namespace=\"default\", pod=~\"hw4-app.*\", pod!~\"hw4-app-postgres.*\"}) ",
+                        "expr": "sum(container_memory_working_set_bytes{namespace=\"default\"}) ",
                         "legendFormat": "Application",
                         "range": true
                       }
@@ -342,7 +342,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "container_memory_usage_bytes{namespace=\"default\", pod=~\"hw4-app.*\", pod=~\"hw4-app-postgres.*\"}",
+                        "expr": "container_memory_usage_bytes{namespace=\"default\"}",
                         "legendFormat": "Database",
                         "range": true
                       }
@@ -474,7 +474,7 @@
                       "spec": {
                         "editorMode": "code",
                         "exemplar": false,
-                        "expr": "sum by(handler, method) (rate(http_requests_total{service=\"hw4-app\", handler!~\"/metrics|/liveness|/readiness|/docs|/openapi.json\"}[5m]))",
+                        "expr": "sum by(handler, method) (rate(http_requests_total{handler!~\"/metrics|/liveness|/readiness|/docs|/openapi.json\"}[5m]))",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
@@ -611,7 +611,7 @@
                       },
                       "spec": {
                         "editorMode": "builder",
-                        "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"hw4-app.*\", pod!~\"hw4-app-postgres.*\"}[5m]))",
+                        "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m]))",
                         "legendFormat": "Application",
                         "range": true
                       }
@@ -632,7 +632,7 @@
                       },
                       "spec": {
                         "editorMode": "builder",
-                        "expr": "rate(container_cpu_usage_seconds_total{namespace=\"default\", pod=~\"hw4-app.*\", pod=~\"hw4-app-postgres.*\"}[5m])",
+                        "expr": "rate(container_cpu_usage_seconds_total{namespace=\"default\"}[5m])",
                         "legendFormat": "Database",
                         "range": true
                       }
@@ -763,7 +763,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le)) * 1000",
+                        "expr": "histogram_quantile(0.5, sum(rate(http_request_duration_seconds_bucket{handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le)) * 1000",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
@@ -787,7 +787,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
+                        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
@@ -811,7 +811,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
+                        "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",
@@ -835,7 +835,7 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "histogram_quantile(1, sum(rate(http_request_duration_seconds_bucket{service=\"hw4-app\", handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
+                        "expr": "histogram_quantile(1, sum(rate(http_request_duration_seconds_bucket{handler!~\"/|/liveness|/metrics|/readiness|/docs|/openapi.json\", status=~\"2.*\"}[5m])) by (handler, method, le))* 1000",
                         "format": "time_series",
                         "instant": false,
                         "interval": "",

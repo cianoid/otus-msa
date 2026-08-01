@@ -4,7 +4,7 @@ from src.schemes import User, UserUpdate
 from src.services.verify import VerifyBearer
 from starlette.status import HTTP_200_OK
 
-router = APIRouter(prefix="/profile", tags=["profile"])
+router = APIRouter(prefix="/api/v1/profile", tags=["profile"])
 security = VerifyBearer()
 
 
@@ -17,7 +17,7 @@ async def profile(
     return User(username=user.username, telegram=user.telegram, email=user.email)
 
 
-@router.put("", response_model=User)
+@router.patch("", response_model=User)
 async def update_user(
     user_data: UserUpdate,
     payload: dict = Depends(security),

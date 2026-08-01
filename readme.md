@@ -56,8 +56,12 @@ kubectl delete namespace kafka
 
 ## Установка API Gateway (из папки nginx-ingress-controller): 
 ```bash
-! cd nginx-ingress-controller
-! helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --values values.yaml
+helm upgrade ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --reuse-values \
+  --values infra/nginx-ingress-controller/values.yaml
+
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --values values.yaml
 ```
 
 ## Установка приложения

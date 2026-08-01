@@ -15,7 +15,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenPair, status_code=HTTP_201_CREATED)
