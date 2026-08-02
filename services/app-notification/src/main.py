@@ -15,8 +15,8 @@ from src.crud import get_notification_crud
 # from src.db import AsyncSessionLocal
 from src.kafka import KafkaClient
 from src.services.email import EmailService
+from src.services.main_process import start_main_process
 
-# ── Suppress access logs for health/metrics endpoints ──────────
 _NOISELESS_PATHS = {"/liveness", "/readiness", "/metrics"}
 
 
@@ -31,16 +31,14 @@ logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    # crud = UserCRUD(AsyncSessionLocal)
-    # app.dependency_overrides[get_user_crud] = crud
     notification_crud = get_notification_crud()
+    app.dependency_overrides[get_notification_crud] = notification_crud
     email_service = EmailService(Path(settings.template_dir), notification_crud)
-    kafka_client = KafkaClient([settings.kafka_send_email_topic], settings.kafka_bootstrap_servers, email_service)
+    kafka_client = KafkaClient(settings.kafka_send_email_topic, settings.kafka_bootstrap_servers)
 
-    await kafka_client.start_consumer()
+    await start_main_process(kafka_client, email_service)
     log.info("API Started")
     yield
-    await kafka_client.stop_consumer()
     log.warning("API Stopped")
     return
 

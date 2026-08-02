@@ -30,7 +30,8 @@ class Settings(BaseSettings):
 
     # ── Kafka ──────────────────────────────────────────────
     kafka_bootstrap_servers: str | None = None
-    kafka_send_email_topic: str = "message.email.send"
+    kafka_send_email_topic: str = "message.send.email"
+    kafka_send_email_topic_dlq: str = "message.send.email.dlq"
 
     # ── Templates ──────────────────────────────────────────
     template_dir: str = "src/templates"

@@ -6,10 +6,10 @@ class MessageTopics(StrEnum):
 
 
 class MessageTypes(StrEnum):
-    TEST_MESSAGE = "test_message"
+    TEST_MESSAGE = "TEST_MESSAGE"
 
 
 class MessageStatus(StrEnum):
-    READY_TO_SEND = "ready_to_send"
-    SENT = "sent"
-    ERROR = "error"
+    READY_TO_SEND = "READY_TO_SEND"
+    SENT = "SENT"
+    ERROR = "ERROR"
