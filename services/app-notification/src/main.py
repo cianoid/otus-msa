@@ -3,17 +3,17 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
-from src.api import main_router, notification_router, user_router
+from src.api import main_router, notification_router
 from src.core.config import settings
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
-from src.crud import UserCRUD, get_notification_crud, get_user_crud
-from src.db import AsyncSessionLocal
-from src.kafka import start_consumer, stop_consumer
+from src.crud import get_notification_crud
+
+# from src.db import AsyncSessionLocal
+from src.kafka import KafkaClient
 from src.services.email import EmailService
 
 # ── Suppress access logs for health/metrics endpoints ──────────
@@ -31,28 +31,23 @@ logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    crud = UserCRUD(AsyncSessionLocal)
-    app.dependency_overrides[get_user_crud] = crud
+    # crud = UserCRUD(AsyncSessionLocal)
+    # app.dependency_overrides[get_user_crud] = crud
     notification_crud = get_notification_crud()
     email_service = EmailService(Path(settings.template_dir), notification_crud)
-    await start_consumer(crud, email_service)
+    kafka_client = KafkaClient([settings.kafka_send_email_topic], settings.kafka_bootstrap_servers, email_service)
+
+    await kafka_client.start_consumer()
     log.info("API Started")
     yield
-    await stop_consumer()
+    await kafka_client.stop_consumer()
     log.warning("API Stopped")
     return
 
 
-app = FastAPI(title="User API", lifespan=lifespan)
-
-
-@app.get(path="/", include_in_schema=False)
-def index(req: Request) -> RedirectResponse:  # noqa: D103
-    return RedirectResponse(str(req.base_url) + "docs")
-
+app = FastAPI(title="Notification API", lifespan=lifespan)
 
 app.include_router(main_router)
-app.include_router(user_router)
 app.include_router(notification_router)
 
 instrumentator = Instrumentator(

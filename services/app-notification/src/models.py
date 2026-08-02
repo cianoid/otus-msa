@@ -1,4 +1,5 @@
 from sqlalchemy import Column, DateTime, String, func
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -7,7 +8,7 @@ Base = declarative_base()
 class NotificationDB(Base):
     __tablename__ = "notifications"
 
-    id = Column(String, primary_key=True, nullable=False)
+    id = Column(UUID, primary_key=True, nullable=False)
     username = Column(String, nullable=True)
     email = Column(String, nullable=False)
     message_type = Column(String, nullable=False)
