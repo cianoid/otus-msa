@@ -1,0 +1,105 @@
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "app.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "app.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "app.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "app.labels" -}}
+helm.sh/chart: {{ include "app.chart" . }}
+{{ include "app.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "app.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "app.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "app.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "app.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
+{{- end }}
+{{- end }}
+
+---
+{{- define "app.envs" -}}
+env:
+  - name: DB_HOST
+    value: "postgres.postgres"
+  - name: DB_PORT
+    value: "5432"
+  - name: DB_NAME
+    value: "app_user"
+  - name: DB_USER
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: DB_USER
+  - name: DB_PASS
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: DB_PASS
+  - name: JWT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: JWT_SECRET
+  - name: SMTP_HOST
+    value: {{ .Values.smtp.host | default "localhost" | quote }}
+  - name: SMTP_PORT
+    value: {{ .Values.smtp.port | default 587 | quote }}
+  - name: SMTP_USER
+    value: {{ .Values.smtp.user | default "" | quote }}
+  - name: SMTP_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: {{ include "app.name" . }}-secrets
+        key: SMTP_PASSWORD
+  - name: SMTP_USE_TLS
+    value: {{ .Values.smtp.useTls | default true | quote }}
+  - name: SMTP_FROM
+    value: {{ .Values.smtp.from | default "noreply@otus-msa.local" | quote }}
+  - name: KAFKA_BOOTSTRAP_SERVERS
+    value: {{ .Values.kafka.bootstrapServers | default "kafka.kafka:9092" | quote }}
+{{- end -}}
