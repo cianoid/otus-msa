@@ -62,6 +62,13 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 201', () => pm.response.to.have.status(201));",
                   "const json = pm.response.json();",
                   "pm.collectionVariables.set('accessToken', json.access_token);",
@@ -107,10 +114,25 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "const json = pm.response.json();",
-                  "pm.expect(Number(json.balance)).to.eql(Number(pm.collectionVariables.get('initialBalance')));",
-                  "pm.collectionVariables.set('balance', json.balance);"
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "const attempt = Number(pm.collectionVariables.get('depositAttempt') || 0);",
+                  "if (pm.response.code === 404 && attempt < 10) {",
+                  "  pm.collectionVariables.set('depositAttempt', attempt + 1);",
+                  "  console.log('Billing account not ready yet, retrying deposit (attempt ' + (attempt + 1) + '/10)...');",
+                  "  setTimeout(() => postman.setNextRequest(pm.info.requestName), 1000);",
+                  "} else {",
+                  "  pm.collectionVariables.unset('depositAttempt');",
+                  "  pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(Number(json.balance)).to.eql(Number(pm.collectionVariables.get('initialBalance')));",
+                  "  pm.collectionVariables.set('balance', json.balance);",
+                  "}"
                 ],
                 "type": "text/javascript"
               }
@@ -139,6 +161,13 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
                   "pm.expect(json.username).to.eql(pm.collectionVariables.get('username'));",
@@ -184,6 +213,13 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 201', () => pm.response.to.have.status(201));",
                   "const json = pm.response.json();",
                   "pm.expect(json.status).to.eql('paid');",
@@ -216,6 +252,13 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
                   "const expected = Number(pm.collectionVariables.get('initialBalance')) - Number(pm.collectionVariables.get('orderPriceOk'));",
@@ -249,12 +292,18 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "const expectedType = 'ORDER_SUCCESS';",
                   "const attempt = Number(pm.collectionVariables.get('notificationAttemptSuccess') || 0);",
                   "const notifications = pm.response.json();",
                   "const found = notifications.find(n => n.message_type === expectedType && n.status === 'SENT');",
-                  "console.log('notifications:', JSON.stringify(notifications, null, 2));",
                   "if (found || attempt >= 10) {",
                   "  pm.collectionVariables.unset('notificationAttemptSuccess');",
                   "  pm.expect(notifications.length).to.be.greaterThan(0);",
@@ -304,6 +353,13 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 201', () => pm.response.to.have.status(201));",
                   "const json = pm.response.json();",
                   "pm.expect(json.status).to.eql('failed');",
@@ -336,6 +392,13 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
                   "pm.expect(Number(json.balance)).to.eql(Number(pm.collectionVariables.get('balanceAfterOk')));",
@@ -368,12 +431,18 @@
               "listen": "test",
               "script": {
                 "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "const expectedType = 'ORDER_FAILED';",
                   "const attempt = Number(pm.collectionVariables.get('notificationAttemptFailed') || 0);",
                   "const notifications = pm.response.json();",
                   "const found = notifications.find(n => n.message_type === expectedType && n.status === 'SENT');",
-                  "console.log('notifications:', JSON.stringify(notifications, null, 2));",
                   "if (found || attempt >= 10) {",
                   "  pm.collectionVariables.unset('notificationAttemptFailed');",
                   "  pm.expect(notifications.length).to.be.greaterThan(0);",

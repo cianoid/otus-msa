@@ -54,6 +54,7 @@ async def _consume_loop(kafka_client: KafkaClient, crud: UserCRUD) -> None:
 
             try:
                 await crud.get_or_update_user(username, UserUpdate(email=email))
+                await kafka_client.consumer.commit()
             except Exception as err:
                 log.exception("%s: Failed to process user creation: %s", msg.key, err)
                 await kafka_client.send(msg, settings.kafka_user_create_topic_dlq)

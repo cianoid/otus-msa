@@ -25,6 +25,7 @@ async def _consume_loop(
         bootstrap_servers=bootstrap_servers,
         group_id=settings.app_title,
         enable_auto_commit=False,
+        auto_offset_reset="earliest",
         value_deserializer=lambda v: json.loads(v.decode("utf-8")),
     )
     global _consumer

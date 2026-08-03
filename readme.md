@@ -65,6 +65,9 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
 ```
 
 ## Установка приложения
+
+Приложение устанавливается в namespace **`default`** (задан в `helmfile.yaml.gotmpl` для всех 5 релизов).
+
 ```shell
 # если изменился код
 ./install.sh build
@@ -81,7 +84,9 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
   - `user.create` (`app-auth` → `app-billing`, `app-user`) — создание счёта и профиля.
   - `message.send.email` (`app-order` → `app-notification`) — письмо о результате заказа.
 
-Схема в формате Mermaid: [docs/hw7-architecture.mermaid](docs/hw7-architecture.mermaid)
+Схема взаимодействия сервисов: [docs/hw7-architecture.png](docs/hw7-architecture.png) (исходник Mermaid: [docs/hw7-architecture.mermaid](docs/hw7-architecture.mermaid)).
+
+Теоретическая часть (4 варианта взаимодействия, sequence-диаграммы, IDL): [docs/hw7-theory.md](docs/hw7-theory.md).
 
 ### Сервисы
 
