@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
@@ -30,20 +31,6 @@ class EmailService:
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         self._env = env
         self._crud = crud
-        self._smtp: SMTP | None = None
-
-    async def _get_smtp(self) -> SMTP:
-        """Return (and cache) a connected SMTP client."""
-        if self._smtp is not None:
-            return self._smtp
-
-        smtp = SMTP(hostname=settings.smtp_host, port=settings.smtp_port, use_tls=settings.smtp_use_tls)
-        await smtp.connect()
-        if settings.smtp_user:
-            await smtp.login(settings.smtp_user, settings.smtp_password)
-        self._smtp = smtp
-        log.info("SMTP connected to %s:%s", settings.smtp_host, settings.smtp_port)
-        return smtp
 
     def _build_message(self, to_email: str, subject: str, body: str) -> MIMEMultipart:
         """Build a multipart/alternative email message with text and HTML parts."""
@@ -59,18 +46,30 @@ class EmailService:
 
         Returns True on success, False on failure.
         """
-        try:
-            smtp = await self._get_smtp()
-            message = self._build_message(email, subject, body)
-            await smtp.send_message(message)
-            log.info("SMTP: message sent to %s (subject=%r)", email, subject)
-            return True
-        except SMTPException as err:
-            log.error("SMTP: failed to send to %s: %s", email, err)
-            return False
-        except Exception as err:
-            log.exception("SMTP: unexpected error sending to %s: %s", email, err)
-            return False
+        for attempt in range(3):
+            smtp = SMTP(hostname=settings.smtp_host, port=settings.smtp_port, use_tls=settings.smtp_use_tls)
+            try:
+                await smtp.connect()
+                if settings.smtp_user:
+                    await smtp.login(settings.smtp_user, settings.smtp_password)
+                message = self._build_message(email, subject, body)
+                await smtp.send_message(message)
+                log.info("SMTP: message sent to %s (subject=%r)", email, subject)
+                return True
+            except SMTPException as err:
+                log.error("SMTP: failed to send to %s (attempt %s): %s", email, attempt + 1, err)
+            except Exception as err:
+                log.exception("SMTP: unexpected error sending to %s (attempt %s): %s", email, attempt + 1, err)
+            finally:
+                try:
+                    await smtp.quit()
+                except Exception:
+                    pass
+            if attempt < 2:
+                await asyncio.sleep(1)
+
+        log.error("SMTP: giving up sending to %s after 3 attempts", email)
+        return False
 
     async def send(
         self, notification_id: UUID, message_type: MessageTypes, email: str, username: str, data: dict

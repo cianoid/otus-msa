@@ -16,3 +16,30 @@ releases:
     set:
       - name: image.tag
         value: {{ .StateValues.app_user.image.tag | default "fallback" }}
+
+  - name: app-billing
+    namespace: default
+    chart: ./charts/chart-app-billing
+    values:
+      - ./charts/chart-app-billing/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_billing.image.tag | default "fallback" }}
+
+  - name: app-order
+    namespace: default
+    chart: ./charts/chart-app-order
+    values:
+      - ./charts/chart-app-order/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_order.image.tag | default "fallback" }}
+
+  - name: app-notification
+    namespace: default
+    chart: ./charts/chart-app-notification
+    values:
+      - ./charts/chart-app-notification/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_notification.image.tag | default "fallback" }}

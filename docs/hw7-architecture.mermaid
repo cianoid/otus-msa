@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Auth as app-auth
+    participant User as app-user
+    participant Billing as app-billing
+    participant Order as app-order
+    participant Notification as app-notification
+    participant Kafka
+    participant DB as PostgreSQL
+
+    rect rgb(240, 248, 255)
+        Note over Client, Notification: Регистрация пользователя
+        Client->>Auth: POST /api/v1/auth/register
+        Auth->>DB: save user
+        Auth->>Kafka: publish user.create
+        Kafka-->>User: consume user.create
+        Kafka-->>Billing: consume user.create
+        Billing->>DB: create account (balance = 0)
+        Auth-->>Client: 201 + tokens
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Client, Notification: Пополнение счёта
+        Client->>Billing: POST /api/v1/billing/deposit
+        Billing->>DB: balance += amount
+        Billing-->>Client: 200 + balance
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Client, Notification: Создание заказа
+        Client->>Order: POST /api/v1/order (price)
+        Order->>Billing: POST /api/v1/billing/withdraw (amount)
+        Billing->>DB: atomic withdraw
+        Billing-->>Order: { success: true|false, balance }
+        Order->>User: GET /api/v1/profile
+        User-->>Order: email
+        Order->>Kafka: publish message.send.email (ORDER_SUCCESS | ORDER_FAILED)
+        Kafka-->>Notification: consume
+        Notification->>DB: save notification
+        Notification->>Notification: send email (stub)
+        Order-->>Client: 201 + order (status paid|failed)
+    end
