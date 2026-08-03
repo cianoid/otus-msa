@@ -57,7 +57,13 @@ async def _consume_loop(kafka_client: KafkaClient, email_client: EmailService) -
                 continue
 
             try:
-                await email_client.send(msg.key, message_type, username, email, **payload.get("data", {}))
+                await email_client.send(
+                    notification_id=msg.key,
+                    message_type=message_type,
+                    email=email,
+                    username=username,
+                    data=payload.get("data", {}),
+                )
                 await kafka_client.consumer.commit()
             except Exception as err:
                 log.exception(

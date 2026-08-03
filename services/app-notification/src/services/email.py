@@ -10,8 +10,7 @@ from uuid import UUID
 from aiosmtplib import SMTP, SMTPException
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from src.core.config import settings
-from src.core.const import NO_SUBJECT
-from src.core.enums import MessageStatus, MessageTypes
+from src.core.enums import MessageStatus, MessageSubjects, MessageTypes
 from src.core.logger import log
 from src.crud import NotificationCRUD
 
@@ -74,7 +73,7 @@ class EmailService:
             return False
 
     async def send(
-        self, notification_id: UUID, message_type: MessageTypes, email: str, username: str, **kwargs
+        self, notification_id: UUID, message_type: MessageTypes, email: str, username: str, data: dict
     ) -> None:
         """Render the ``<message_type>.html`` template with *kwargs* and persist
         the result.  *email* is required in *kwargs* and is popped before
@@ -106,8 +105,9 @@ class EmailService:
             await self._crud.update_message_error(notification_id)
             return
 
-        body: str = template.render(**kwargs)
-        subject: str = kwargs.get("subject", NO_SUBJECT)
+        subject = MessageSubjects[message_type].value
+        data.update({"username": username, "email": email, "subject": subject})
+        body: str = template.render(**data)
         await self._crud.update_message_with_data(notification_id, subject=subject, body=body)
 
         if await self._send_email(email, subject, body):
