@@ -1,51 +1,128 @@
-"""Kafka producer — sends messages asynchronously to configured topics."""
-
 from __future__ import annotations
 
-import json
+import asyncio
 
-from aiokafka import AIOKafkaProducer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRecord
+from orjson import orjson
 from src.core.config import settings
 from src.core.logger import log
 
-_producer: AIOKafkaProducer | None = None
+_consumer_task: asyncio.Task[None] | None = None
 
 
-async def start_producer() -> AIOKafkaProducer:
-    """Start and return a cached singleton AIOKafkaProducer (idempotent)."""
-    global _producer
-    if _producer is None:
-        _producer = AIOKafkaProducer(
-            bootstrap_servers=settings.kafka_bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
-            key_serializer=lambda k: k.encode("utf-8") if k else None,
-        )
-        await _producer.start()
-        log.info("Kafka producer started (bootstrap: %s)", settings.kafka_bootstrap_servers)
-    return _producer
+class KafkaClient:
+    @staticmethod
+    def _encode(data):
+        if isinstance(data, dict):
+            return orjson.dumps(data)
+        if not isinstance(data, str):
+            data = str(data)
+        return data.encode()
+
+    def __call__(self):
+        return self
+
+    def __init__(
+        self,
+        bootstrap_servers: str,
+        topic_to_consume: str | None = None,
+        consumer_enabled: bool = True,
+        producer_enabled: bool = True,
+    ):
+        if topic_to_consume is None:
+            consumer_enabled = False
+        self.consumer_enabled = consumer_enabled
+        self.producer_enabled = producer_enabled
+
+        if self.consumer_enabled:
+            self.consumer = AIOKafkaConsumer(
+                topic_to_consume,
+                bootstrap_servers=bootstrap_servers,
+                group_id=settings.app_title,
+                client_id=settings.app_title,
+                enable_auto_commit=False,
+                auto_offset_reset="earliest",
+                key_deserializer=lambda k: k.decode("utf-8") if k else None,
+                value_deserializer=lambda v: orjson.loads(v.decode("utf-8")) if v else None,
+                max_poll_records=1,
+            )
+            log.info(
+                "Kafka consumer configured (bootstrap: %s, client_id: %s, topic_to_consume: %s)",
+                bootstrap_servers,
+                settings.app_title,
+                topic_to_consume,
+            )
+
+        if self.producer_enabled:
+            self.producer = AIOKafkaProducer(
+                bootstrap_servers=bootstrap_servers,
+                key_serializer=self._encode,
+                value_serializer=self._encode,
+                request_timeout_ms=2_000,
+                client_id=settings.app_title,
+            )
+            log.info("Kafka producer configured (bootstrap: %s, client_id: %s)", bootstrap_servers, settings.app_title)
+
+    async def send(self, msg: ConsumerRecord, topic: str) -> None:
+        if not self.producer_enabled:
+            log.warning("Can't send message while producer is disabled")
+            return
+
+        try:
+            log.info("%s: About to send message to %s with data=%s", msg.key, topic, msg.value)
+            await self.producer.send_and_wait(topic=topic, value=msg.value, key=msg.key)
+        except Exception as err:
+            log.error("Error while sending message to topic_to_consume %s: %s", topic, err)
+        else:
+            log.info("%s: Sent message to %s with data=%s", msg.key, topic, msg.value)
+
+    async def _start_consumer(self) -> None:
+        """Start the Kafka consumer as a background task (idempotent)."""
+        if not self.consumer_enabled:
+            log.warning("Can't start consume while consumer is disabled")
+            return
+
+        global _consumer_task
+
+        if not settings.kafka_bootstrap_servers:
+            log.warning("KAFKA_BOOTSTRAP_SERVERS not configured — Kafka consumer disabled")
+            return
+
+        if _consumer_task is not None and not _consumer_task.done():
+            log.warning("Kafka consumer already running — skipping duplicate start")
+            return
+
+        await self.consumer.start()
+        log.info("Kafka consumer started")
+
+    async def _stop_consumer(self) -> None:
+        """Gracefully stop the Kafka consumer (called on app shutdown)."""
+        if not self.consumer_enabled:
+            log.warning("Can't stop consume while consumer is disabled")
+            return
+
+        global _consumer_task
+        if _consumer_task is not None and not _consumer_task.done():
+            _consumer_task.cancel()
+            try:
+                await _consumer_task
+            except asyncio.CancelledError:
+                pass
+            _consumer_task = None
+            log.info("Kafka consumer task cancelled and awaited")
+
+    async def start(self) -> None:
+        if self.consumer_enabled:
+            await self._start_consumer()
+        if self.producer_enabled:
+            await self.producer.start()
+
+    async def stop(self) -> None:
+        if self.consumer_enabled:
+            await self._stop_consumer()
+        if self.producer_enabled:
+            await self.producer.stop()
 
 
-async def _get_producer() -> AIOKafkaProducer:
-    """Return the cached AIOKafkaProducer, starting it if needed."""
-    return await start_producer()
-
-
-async def send_user_created(username: str, email: str) -> None:
-    """Send a user.create event to Kafka.
-
-    Key:   user_id (string)
-    Body:  {"username": str, "email": str}
-    """
-    producer = await _get_producer()
-    value = {"username": username, "email": email}
-    await producer.send_and_wait(topic=settings.kafka_user_create_topic, key=username, value=value)
-    log.info("Sent user.create: username=%s topic=%s", username, settings.kafka_user_create_topic)
-
-
-async def stop_producer() -> None:
-    """Gracefully stop the Kafka producer (called on app shutdown)."""
-    global _producer
-    if _producer is not None:
-        await _producer.stop()
-        _producer = None
-        log.info("Kafka producer stopped")
+def get_kafka() -> KafkaClient:
+    raise NotImplementedError

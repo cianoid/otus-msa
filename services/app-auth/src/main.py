@@ -7,11 +7,12 @@ from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
 from src.api import auth_router, main_router
+from src.core.config import settings
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
 from src.db import AsyncSessionLocal
-from src.kafka import start_producer, stop_producer
+from src.kafka import KafkaClient, get_kafka
 
 # ── Suppress access logs for health/metrics endpoints ──────────
 _NOISELESS_PATHS = {"/liveness", "/readiness", "/metrics"}
@@ -28,11 +29,14 @@ logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    kafka_client = KafkaClient(bootstrap_servers=settings.kafka_bootstrap_servers, consumer_enabled=False)
     app.dependency_overrides[get_user_crud] = UserCRUD(AsyncSessionLocal)
-    await start_producer()
+    app.dependency_overrides[get_kafka] = kafka_client
+
+    await kafka_client.start()
     log.info("API Started")
     yield
-    await stop_producer()
+    await kafka_client.stop()
     log.warning("API Stopped")
     return
 

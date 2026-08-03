@@ -11,8 +11,6 @@ from src.core.config import settings
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
 from src.crud import get_notification_crud
-
-# from src.db import AsyncSessionLocal
 from src.kafka import KafkaClient
 from src.services.email import EmailService
 from src.services.main_process import start_main_process
@@ -34,7 +32,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     notification_crud = get_notification_crud()
     app.dependency_overrides[get_notification_crud] = notification_crud
     email_service = EmailService(Path(settings.template_dir), notification_crud)
-    kafka_client = KafkaClient(settings.kafka_send_email_topic, settings.kafka_bootstrap_servers)
+    kafka_client = KafkaClient(
+        bootstrap_servers=settings.kafka_bootstrap_servers, topic_to_consume=settings.kafka_send_email_topic
+    )
 
     await start_main_process(kafka_client, email_service)
     log.info("API Started")

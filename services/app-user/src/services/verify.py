@@ -5,16 +5,13 @@ from __future__ import annotations
 import jwt
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPBearer
-from src.core.config import (
-    JWT_ALGORITHM,
-    JWT_SECRET,
-)
+from src.core.config import settings
 from src.core.logger import log
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 
 def decode_token(token: str) -> dict:
-    return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
 
 
 class VerifyBearer(HTTPBearer):
