@@ -57,9 +57,14 @@ class NotificationCRUD(BaseCRUD):
             result = await session.execute(select(NotificationDB).where(NotificationDB.id == notification_id))
             return result.scalars().one_or_none()
 
-    async def list_all(self) -> list[NotificationDB]:
+    async def list_all(self, username: str) -> list[NotificationDB]:
         async with self.session() as session:
-            result = await session.execute(select(NotificationDB).order_by(NotificationDB.created_at.desc()))
+            stmt = (
+                select(NotificationDB)
+                .where(NotificationDB.username == username)
+                .order_by(NotificationDB.created_at.desc())
+            )
+            result = await session.execute(stmt)
             return list(result.scalars().all())
 
 

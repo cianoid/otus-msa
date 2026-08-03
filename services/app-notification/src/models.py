@@ -17,3 +17,6 @@ class NotificationDB(Base):
     status = Column(String, nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    def model_to_dict(obj):
+        return {key: value for key, value in obj.__dict__.items() if not key.startswith("_")}
