@@ -1,21 +1,25 @@
-"""EmailService — loads, renders, and persists notification messages."""
+"""EmailService — loads, renders, persists, and sends notification messages via SMTP."""
 
 from __future__ import annotations
 
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 from uuid import UUID
 
-from core.enums import MessageStatus
+from aiosmtplib import SMTP, SMTPException
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
+from src.core.config import settings
 from src.core.const import NO_SUBJECT
-from src.core.enums import MessageTypes
+from src.core.enums import MessageStatus, MessageTypes
 from src.core.logger import log
 from src.crud import NotificationCRUD
 
 
 class EmailService:
     """Loads an HTML template by *message_type*, renders it with the provided
-    keyword arguments, and persists the result via *NotificationCRUD*.
+    keyword arguments, persists the result via *NotificationCRUD*, and sends
+    it through the configured SMTP server.
 
     Usage::
 
@@ -27,9 +31,47 @@ class EmailService:
         env = Environment(loader=FileSystemLoader(str(template_dir)))
         self._env = env
         self._crud = crud
+        self._smtp: SMTP | None = None
+
+    async def _get_smtp(self) -> SMTP:
+        """Return (and cache) a connected SMTP client."""
+        if self._smtp is not None:
+            return self._smtp
+
+        smtp = SMTP(hostname=settings.smtp_host, port=settings.smtp_port, use_tls=settings.smtp_use_tls)
+        await smtp.connect()
+        if settings.smtp_user:
+            await smtp.login(settings.smtp_user, settings.smtp_password)
+        self._smtp = smtp
+        log.info("SMTP connected to %s:%s", settings.smtp_host, settings.smtp_port)
+        return smtp
+
+    def _build_message(self, to_email: str, subject: str, body: str) -> MIMEMultipart:
+        """Build a multipart/alternative email message with text and HTML parts."""
+        msg = MIMEMultipart("alternative")
+        msg["From"] = settings.smtp_from
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "html", "utf-8"))
+        return msg
 
     async def _send_email(self, email: str, subject: str, body: str) -> bool:
-        return True
+        """Send an email via the configured SMTP server.
+
+        Returns True on success, False on failure.
+        """
+        try:
+            smtp = await self._get_smtp()
+            message = self._build_message(email, subject, body)
+            await smtp.send_message(message)
+            log.info("SMTP: message sent to %s (subject=%r)", email, subject)
+            return True
+        except SMTPException as err:
+            log.error("SMTP: failed to send to %s: %s", email, err)
+            return False
+        except Exception as err:
+            log.exception("SMTP: unexpected error sending to %s: %s", email, err)
+            return False
 
     async def send(
         self, notification_id: UUID, message_type: MessageTypes, email: str, username: str, **kwargs

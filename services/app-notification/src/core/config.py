@@ -33,6 +33,14 @@ class Settings(BaseSettings):
     kafka_send_email_topic: str = "message.send.email"
     kafka_send_email_topic_dlq: str = "message.send.email.dlq"
 
+    # ── SMTP ───────────────────────────────────────────────
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    smtp_from: str = "noreply@otus-msa.local"
+
     # ── Templates ──────────────────────────────────────────
     template_dir: str = "src/templates"
 
