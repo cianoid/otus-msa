@@ -71,3 +71,33 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
 # если изменился только манифест
 ./install.sh
 ```
+
+## Архитектура взаимодействия сервисов
+
+Реализован гибридный вариант:
+
+- **HTTP** — синхронное списание денег при оформлении заказа (`app-order` → `app-billing`).
+- **Kafka** — событийное взаимодействие:
+  - `user.create` (`app-auth` → `app-billing`, `app-user`) — создание счёта и профиля.
+  - `message.send.email` (`app-order` → `app-notification`) — письмо о результате заказа.
+
+Схема в формате Mermaid: [docs/hw7-architecture.mermaid](docs/hw7-architecture.mermaid)
+
+### Сервисы
+
+- `app-auth` — регистрация/логин, публикует `user.create`.
+- `app-user` — профиль пользователя, слушает `user.create`.
+- `app-billing` — счёт пользователя (`deposit`, `withdraw`), слушает `user.create`.
+- `app-order` — создание заказа, синхронно вызывает `app-billing/withdraw`, публикует `message.send.email`.
+- `app-notification` — слушает `message.send.email`, сохраняет письмо в БД.
+
+### Запуск тестов Postman
+
+Коллекция: [postman/otus-msa-hw7.postman_collection.json](postman/otus-msa-hw7.postman_collection.json)
+
+```shell
+newman run postman/otus-msa-hw7.postman_collection.json
+```
+
+`baseUrl` уже задан в коллекции (`arch.homework`). При необходимости его можно переопределить через environment-файл.
+
