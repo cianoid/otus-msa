@@ -13,6 +13,7 @@ dependencies = [
     "greenlet>=3.5.3",
     "prometheus-fastapi-instrumentator>=8.0.2",
     "pydantic>=2.13.4",
+    "pydantic-settings>=2.12.0",
     "pyjwt>=2.13.0",
     "python-dotenv>=1.2.2",
     "sqlalchemy>=2.0.51",
