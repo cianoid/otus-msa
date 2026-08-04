@@ -1,7 +1,9 @@
 # Установка
 
-## Установка Postgres
-### Удаление старой БД
+## Установка инфраструктуры
+
+### Установка Postgres
+#### Удаление старой БД
 ! Если нужно создать БД с нуля с параметрами из values.yaml, то нужно сперва удалить старую, так как init-скрипт не запустится
 ```shell
 helm uninstall postgres -n postgres
@@ -14,28 +16,28 @@ kubectl create configmap pg-init-scripts --namespace postgres --from-file=infra/
 helm upgrade postgres infra/postgres --install --namespace postgres --values infra/postgres/values.yaml
 ```
 
-### Получить доступ к БД
+#### Получить доступ к БД
 ```shell
 minikube service postgres -n postgres --url
 ```
 
-## Установка Prometheus + Grafana
+### Установка Prometheus + Grafana
 ```shell
 kubectl create namespace prometheus
 helm upgrade prometheus prometheus/kube-prometheus-stack --install --namespace prometheus --values infra/prometheus/values.yaml
 ```
 
-### Прописать локальный домен
+#### Прописать локальный домен
 ```shell
 sudo echo '127.0.0.1 grafana.local' >> /etc/hosts
 ```
 
-### Вытащить пароль админа
+#### Вытащить пароль админа
 ```shell
 kubectl --namespace prometheus get secrets prometheus-grafana -o jsonpath="{.data.admin-password}" | base64 -d ; echo
 ```
 
-## Установка Kafka
+### Установка Kafka
 ```shell
 kubectl create namespace kafka
 kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
@@ -44,7 +46,7 @@ kubectl apply -f https://strimzi.io/examples/latest/kafka/kafka-single-node.yaml
 kubectl wait kafka/my-cluster --for=condition=Ready --timeout=300s -n kafka
 ```
 
-### Удаление Kafka
+#### Удаление Kafka
 ```shell
 kubectl delete kafka my-cluster -n kafka
 kubectl delete -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
@@ -54,7 +56,7 @@ kubectl get pv | grep kafka
 kubectl delete namespace kafka
 ```
 
-## Установка API Gateway (из папки nginx-ingress-controller): 
+### Установка API Gateway (из папки nginx-ingress-controller): 
 ```bash
 helm upgrade ingress-nginx ingress-nginx/ingress-nginx \
   --namespace ingress-nginx \
@@ -66,27 +68,27 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
 
 ## Установка приложения
 
-Приложение устанавливается в namespace **`default`** (задан в `helmfile.yaml.gotmpl` для всех 5 релизов).
+Приложение устанавливается в namespace **`default`** (задан в `helmfile.yaml.gotmpl` для всех 6 релизов).
 
 ```shell
 # если изменился код
-./install.sh build
+./install.py build
 # если изменился только манифест
-./install.sh
+./install.py
 ```
 
-## Архитектура взаимодействия сервисов
+### Frontend
 
-Реализован гибридный вариант:
+Frontend-приложение (React + TypeScript + Vite) находится в папке `services/app-frontend/`
 
-- **HTTP** — синхронное списание денег при оформлении заказа (`app-order` → `app-billing`).
-- **Kafka** — событийное взаимодействие:
-  - `user.create` (`app-auth` → `app-billing`, `app-user`) — создание счёта и профиля.
-  - `message.send.email` (`app-order` → `app-notification`) — письмо о результате заказа.
+Для локальной разработки:
+```shell
+cd services/app-frontend
+npm install
+npm run dev
+```
 
-Схема взаимодействия сервисов: [docs/hw7-architecture.png](docs/hw7-architecture.png) (исходник Mermaid: [docs/hw7-architecture.mermaid](docs/hw7-architecture.mermaid)).
-
-Теоретическая часть (4 варианта взаимодействия, sequence-диаграммы, IDL): [docs/hw7-theory.md](docs/hw7-theory.md).
+Приложение будет доступно по адресу `http://localhost:7100`. API-запросы проксируются через Vite на `http://arch.homework`.
 
 ### Сервисы
 
@@ -95,14 +97,13 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
 - `app-billing` — счёт пользователя (`deposit`, `withdraw`), слушает `user.create`.
 - `app-order` — создание заказа, синхронно вызывает `app-billing/withdraw`, публикует `message.send.email`.
 - `app-notification` — слушает `message.send.email`, сохраняет письмо в БД.
+- `app-frontend` — React SPA с личным кабинетом (профиль, баланс, заказы, уведомления).
 
-### Запуск тестов Postman
+## Архитектура взаимодействия сервисов
 
-Коллекция: [postman/otus-msa-hw7.postman_collection.json](postman/otus-msa-hw7.postman_collection.json)
+- **HTTP** — синхронное списание денег при оформлении заказа (`app-order` → `app-billing`).
+- **Kafka** — событийное взаимодействие:
+  - `user.create` (`app-auth` → `app-billing`, `app-user`) — создание счёта и профиля.
+  - `message.send.email` (`app-order` → `app-notification`) — письмо о результате заказа.
 
-```shell
-newman run postman/otus-msa-hw7.postman_collection.json
-```
-
-`baseUrl` уже задан в коллекции (`arch.homework`). При необходимости его можно переопределить через environment-файл.
-
+Схема взаимодействия сервисов: [docs/hw7-architecture.png](docs/hw7-architecture.png) (исходник Mermaid: [docs/hw7-architecture.mermaid](docs/hw7-architecture.mermaid)).

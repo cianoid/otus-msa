@@ -43,3 +43,12 @@ releases:
     set:
       - name: image.tag
         value: {{ .StateValues.app_notification.image.tag | default "fallback" }}
+
+  - name: app-frontend
+    namespace: default
+    chart: ./charts/chart-app-frontend
+    values:
+      - ./charts/chart-app-frontend/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_frontend.image.tag | default "fallback" }}
