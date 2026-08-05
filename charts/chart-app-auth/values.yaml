@@ -34,7 +34,7 @@ ingress:
   hosts:
     - host: arch.homework
       paths:
-        - path: /auth/
+        - path: /api/v1/auth
           pathType: ImplementationSpecific
   tls: []
     # - secretName: chart-example-tls

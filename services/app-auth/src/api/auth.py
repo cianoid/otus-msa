@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
-from src.kafka import send_user_created
+from src.kafka import KafkaClient, get_kafka
 from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
 from src.services.auth import (
     create_access_token,
@@ -9,17 +9,20 @@ from src.services.auth import (
     decode_token,
     verify_password,
 )
+from src.services.kafka import send_user_created
 from starlette.status import (
     HTTP_201_CREATED,
     HTTP_401_UNAUTHORIZED,
     HTTP_409_CONFLICT,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenPair, status_code=HTTP_201_CREATED)
-async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user_crud)):
+async def register(
+    user_data: UserCreate, kafka: KafkaClient = Depends(get_kafka), user_crud: UserCRUD = Depends(get_user_crud)
+):
     existing = await user_crud.get_user_by_username(user_data.username)
     if existing:
         raise HTTPException(status_code=HTTP_409_CONFLICT, detail="Username already taken")
@@ -30,7 +33,7 @@ async def register(user_data: UserCreate, user_crud: UserCRUD = Depends(get_user
         log.critical("%s: Error during user save", str(err), exc_info=True)
 
     # Отправляем событие о создании пользователя в Kafka
-    await send_user_created(username=user_data.username, email=user_data.email)
+    await send_user_created(kafka=kafka, username=user_data.username, email=user_data.email)
 
     access_token = create_access_token(user_data.username)
     refresh_token = create_refresh_token(user_data.username)
