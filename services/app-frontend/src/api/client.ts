@@ -1,10 +1,14 @@
 import type {
   Account,
   ApiError,
+  DeliverySlot,
+  DeliverySlotCreate,
   DepositRequest,
   Notification,
   Order,
   OrderCreate,
+  Product,
+  ProductCreate,
   TokenPair,
   User,
   UserCreate,
@@ -91,6 +95,34 @@ export const orderApi = {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(data),
     }).then((res) => handleResponse<Order>(res)),
+}
+
+export const warehouseApi = {
+  listProducts: (): Promise<Product[]> =>
+    fetch(`${API_BASE}/warehouse/products`, {
+      headers: { ...getAuthHeaders() },
+    }).then((res) => handleResponse<Product[]>(res)),
+
+  createProduct: (data: ProductCreate): Promise<Product> =>
+    fetch(`${API_BASE}/warehouse/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data),
+    }).then((res) => handleResponse<Product>(res)),
+}
+
+export const deliveryApi = {
+  listSlots: (): Promise<DeliverySlot[]> =>
+    fetch(`${API_BASE}/delivery/slots`, {
+      headers: { ...getAuthHeaders() },
+    }).then((res) => handleResponse<DeliverySlot[]>(res)),
+
+  createSlot: (data: DeliverySlotCreate): Promise<DeliverySlot> =>
+    fetch(`${API_BASE}/delivery/slots`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(data),
+    }).then((res) => handleResponse<DeliverySlot>(res)),
 }
 
 export const notificationApi = {

@@ -1,0 +1,57 @@
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Order as app-order (оркестратор)
+    participant Warehouse as app-warehouse
+    participant Delivery as app-delivery
+    participant Billing as app-billing
+    participant Kafka
+    participant Notification as app-notification
+    participant DB as PostgreSQL
+
+    rect rgb(240, 255, 240)
+        Note over Client, Notification: Сага создания заказа — успешный сценарий
+        Client->>Order: POST /api/v1/order {price, product_id, quantity, slot_id}
+        Order->>Warehouse: POST /reserve {order_id, product_id, quantity}
+        Warehouse->>DB: stock -= quantity, create reservation
+        Warehouse-->>Order: 200 {success: true, reservation_id, stock}
+        Order->>Delivery: POST /reserve {order_id, slot_id}
+        Delivery->>DB: reserved += 1, create reservation
+        Delivery-->>Order: 200 {success: true, reservation_id}
+        Order->>Billing: POST /withdraw {amount}
+        Billing->>DB: atomic withdraw
+        Billing-->>Order: 200 {success: true, balance}
+        Order->>DB: save order (status = paid)
+        Order->>Kafka: publish message.send.email (ORDER_SUCCESS)
+        Kafka-->>Notification: consume message.send.email
+        Notification->>DB: save notification
+        Notification->>Notification: send email (stub)
+        Order-->>Client: 201 + order (status = paid)
+    end
+
+    rect rgb(255, 240, 240)
+        Note over Client, Notification: Сага создания заказа — не хватает денег (компенсация)
+        Client->>Order: POST /api/v1/order {price, product_id, quantity, slot_id}
+        Order->>Warehouse: POST /reserve {order_id, product_id, quantity}
+        Warehouse->>DB: stock -= quantity, create reservation
+        Warehouse-->>Order: 200 {success: true, reservation_id, stock}
+        Order->>Delivery: POST /reserve {order_id, slot_id}
+        Delivery->>DB: reserved += 1, create reservation
+        Delivery-->>Order: 200 {success: true, reservation_id}
+        Order->>Billing: POST /withdraw {amount}
+        Billing->>DB: atomic withdraw (balance < amount)
+        Billing-->>Order: 200 {success: false, balance}
+        Note over Order: Компенсации в обратном порядке
+        Order->>Delivery: POST /cancel {reservation_id}
+        Delivery->>DB: reserved -= 1, cancel reservation
+        Delivery-->>Order: 200 {success: true}
+        Order->>Warehouse: POST /cancel {reservation_id}
+        Warehouse->>DB: stock += quantity, cancel reservation
+        Warehouse-->>Order: 200 {success: true}
+        Order->>DB: save order (status = failed)
+        Order->>Kafka: publish message.send.email (ORDER_FAILED)
+        Kafka-->>Notification: consume message.send.email
+        Notification->>DB: save notification
+        Notification->>Notification: send email (stub)
+        Order-->>Client: 201 + order (status = failed)
+    end
