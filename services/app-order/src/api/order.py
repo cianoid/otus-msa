@@ -1,4 +1,7 @@
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, Request
+from src.core.logger import log
 from src.crud import OrderCRUD, get_order_crud
 from src.kafka import KafkaClient, get_kafka
 from src.schemes import Order, OrderCreate
@@ -38,20 +41,79 @@ async def create_order(
     token = _extract_token(req)
     http_client = ServiceClient()
 
+    order_id = uuid4()
+    success = False
+    billing_result: dict = {}
+    warehouse_reservation_id: str | None = None
+    delivery_reservation_id: str | None = None
+
     try:
-        # 1. Try to withdraw money synchronously.
-        billing_result = await http_client.withdraw_from_billing(username, request.price, token)
-        success = billing_result.get("success", False)
+        # Saga: warehouse reserve -> delivery reserve -> billing withdraw.
+        # Any failure (business or network/HTTP) rolls back previous steps.
 
-        # 2. Persist order.
+        # 1. Reserve product in warehouse.
+        try:
+            warehouse_result = await http_client.reserve_warehouse(
+                str(order_id), request.product_id, request.quantity, token
+            )
+            if warehouse_result.get("success"):
+                warehouse_reservation_id = warehouse_result.get("reservation_id")
+            else:
+                log.info("saga: warehouse reserve failed for order %s", order_id)
+        except Exception:
+            log.exception("saga: warehouse reserve error for order %s", order_id)
+
+        # 2. Reserve courier slot in delivery.
+        if warehouse_reservation_id:
+            try:
+                delivery_result = await http_client.reserve_delivery(str(order_id), request.slot_id, token)
+                if delivery_result.get("success"):
+                    delivery_reservation_id = delivery_result.get("reservation_id")
+                else:
+                    log.info("saga: delivery reserve failed for order %s", order_id)
+            except Exception:
+                log.exception("saga: delivery reserve error for order %s", order_id)
+
+        # 3. Withdraw money in billing.
+        if delivery_reservation_id:
+            try:
+                billing_result = await http_client.withdraw_from_billing(username, request.price, token)
+                success = billing_result.get("success", False)
+                if not success:
+                    log.info("saga: billing withdraw failed for order %s", order_id)
+            except Exception:
+                log.exception("saga: billing withdraw error for order %s", order_id)
+
+        # Compensations (best-effort, in reverse order).
+        if not success:
+            if delivery_reservation_id:
+                try:
+                    await http_client.cancel_delivery_reservation(delivery_reservation_id, token)
+                except Exception:
+                    log.exception("saga: delivery compensation failed for order %s", order_id)
+            if warehouse_reservation_id:
+                try:
+                    await http_client.cancel_warehouse_reservation(warehouse_reservation_id, token)
+                except Exception:
+                    log.exception("saga: warehouse compensation failed for order %s", order_id)
+
+        # Persist order.
         status = "paid" if success else "failed"
-        order = await order_crud.create_order(username, request.price, status)
+        order = await order_crud.create_order(
+            username,
+            request.price,
+            status,
+            order_id=order_id,
+            product_id=request.product_id,
+            quantity=request.quantity,
+            slot_id=request.slot_id,
+        )
 
-        # 3. Fetch user profile for email.
+        # Fetch user profile for email.
         profile = await http_client.get_user_profile(token)
         email = profile.get("email")
 
-        # 4. Send notification event.
+        # Send notification event.
         message_type = "ORDER_SUCCESS" if success else "ORDER_FAILED"
         await kafka.send_notification(
             notification_id=str(order.id),

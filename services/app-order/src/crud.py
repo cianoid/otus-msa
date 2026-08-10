@@ -25,9 +25,27 @@ class BaseCRUD:
 
 
 class OrderCRUD(BaseCRUD):
-    async def create_order(self, username: str, price: Decimal, status: str) -> OrderDB:
+    async def create_order(
+        self,
+        username: str,
+        price: Decimal,
+        status: str,
+        order_id: UUID | None = None,
+        product_id: int | None = None,
+        quantity: int | None = None,
+        slot_id: int | None = None,
+    ) -> OrderDB:
         async with self.session() as session:
-            order = OrderDB(username=username, price=price, status=status)
+            order = OrderDB(
+                username=username,
+                price=price,
+                status=status,
+                product_id=product_id,
+                quantity=quantity,
+                slot_id=slot_id,
+            )
+            if order_id is not None:
+                order.id = order_id
             session.add(order)
             await session.commit()
             await session.refresh(order)
