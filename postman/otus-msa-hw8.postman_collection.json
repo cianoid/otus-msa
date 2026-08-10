@@ -1,0 +1,1068 @@
+{
+  "info": {
+    "_postman_id": "9a7c6b5d-2345-6789-abcd-ef0123456789",
+    "name": "OTUS MSA HW8 — Distributed Transactions (Saga)",
+    "description": "Сага с оркестрацией: пользователь → депозит → продукт на складе и слот доставки → успешный заказ (paid) → заказ без денег (failed + компенсация) → заказ без товара (failed) → уведомления ORDER_SUCCESS/ORDER_FAILED.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "arch.homework",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "password123",
+      "type": "string"
+    },
+    {
+      "key": "initialBalance",
+      "value": "1000",
+      "type": "string"
+    },
+    {
+      "key": "productStock",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "orderPriceOk",
+      "value": "500",
+      "type": "string"
+    },
+    {
+      "key": "orderPriceFail",
+      "value": "9999",
+      "type": "string"
+    },
+    {
+      "key": "orderQtyExceed",
+      "value": "10",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "slotId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"email\": \"{{$randomUserName}}@cianoid.ru\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('username', JSON.parse(pm.request.body.raw).username);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('accessToken', json.access_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Billing setup",
+      "item": [
+        {
+          "name": "Deposit money",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"{{initialBalance}}\"\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/billing/deposit",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "deposit"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "const attempt = Number(pm.collectionVariables.get('depositAttempt') || 0);",
+                  "if (pm.response.code === 404 && attempt < 10) {",
+                  "  pm.collectionVariables.set('depositAttempt', attempt + 1);",
+                  "  console.log('Billing account not ready yet, retrying deposit (attempt ' + (attempt + 1) + '/10)...');",
+                  "  setTimeout(() => postman.setNextRequest(pm.info.requestName), 1000);",
+                  "} else {",
+                  "  pm.collectionVariables.unset('depositAttempt');",
+                  "  pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "  const json = pm.response.json();",
+                  "  pm.test('Billing account created, balance equals deposit', () => {",
+                  "    pm.expect(Number(json.balance)).to.eql(Number(pm.collectionVariables.get('initialBalance')));",
+                  "  });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get account balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/billing/account",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "account"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.expect(json.username).to.eql(pm.collectionVariables.get('username'));",
+                  "pm.expect(Number(json.balance)).to.eql(Number(pm.collectionVariables.get('initialBalance')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Warehouse & Delivery setup",
+      "item": [
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Phone\",\n  \"stock\": {{productStock}}\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/warehouse/products",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "warehouse",
+                "products"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.expect(Number(json.stock)).to.eql(Number(pm.collectionVariables.get('productStock')));",
+                  "pm.collectionVariables.set('productId', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create delivery slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_slot\": \"2026-01-01 10:00-12:00\",\n  \"capacity\": 1\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/delivery/slots",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "delivery",
+                "slots"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.expect(Number(json.capacity)).to.eql(1);",
+                  "pm.expect(Number(json.reserved)).to.eql(0);",
+                  "pm.collectionVariables.set('slotId', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Order — success (paid)",
+      "item": [
+        {
+          "name": "Create order (success)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": {{orderPriceOk}},\n  \"product_id\": {{productId}},\n  \"quantity\": 1,\n  \"slot_id\": {{slotId}}\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/order",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "order"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Order status is paid', () => pm.expect(json.status).to.eql('paid'));",
+                  "pm.collectionVariables.set('orderIdOk', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check balance decreased",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/billing/account",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "account"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const expected = Number(pm.collectionVariables.get('initialBalance')) - Number(pm.collectionVariables.get('orderPriceOk'));",
+                  "pm.test('Balance decreased by order price', () => pm.expect(Number(json.balance)).to.eql(expected));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check product stock decreased",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/warehouse/products",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "warehouse",
+                "products"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const products = pm.response.json();",
+                  "const product = products.find(p => p.id === Number(pm.collectionVariables.get('productId')));",
+                  "pm.expect(product, 'product should exist').to.not.be.undefined;",
+                  "const expected = Number(pm.collectionVariables.get('productStock')) - 1;",
+                  "pm.test('Product stock decreased by 1', () => pm.expect(Number(product.stock)).to.eql(expected));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check slot reserved",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/delivery/slots",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "delivery",
+                "slots"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const slots = pm.response.json();",
+                  "const slot = slots.find(s => s.id === Number(pm.collectionVariables.get('slotId')));",
+                  "pm.expect(slot, 'slot should exist').to.not.be.undefined;",
+                  "pm.test('Slot reserved = 1', () => pm.expect(Number(slot.reserved)).to.eql(1));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Order — not enough money (failed + compensation)",
+      "item": [
+        {
+          "name": "Create delivery slot (fail scenario)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_slot\": \"2026-01-02 10:00-12:00\",\n  \"capacity\": 1\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/delivery/slots",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "delivery",
+                "slots"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.expect(Number(json.capacity)).to.eql(1);",
+                  "pm.expect(Number(json.reserved)).to.eql(0);",
+                  "pm.collectionVariables.set('slotIdFail', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create order (failed, price > balance)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": {{orderPriceFail}},\n  \"product_id\": {{productId}},\n  \"quantity\": 1,\n  \"slot_id\": {{slotIdFail}}\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/order",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "order"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Order status is failed', () => pm.expect(json.status).to.eql('failed'));",
+                  "pm.collectionVariables.set('orderIdFailMoney', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check balance unchanged",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/billing/account",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "account"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const expected = Number(pm.collectionVariables.get('initialBalance')) - Number(pm.collectionVariables.get('orderPriceOk'));",
+                  "pm.test('Balance unchanged after failed order', () => pm.expect(Number(json.balance)).to.eql(expected));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check product stock restored (compensation)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/warehouse/products",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "warehouse",
+                "products"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const products = pm.response.json();",
+                  "const product = products.find(p => p.id === Number(pm.collectionVariables.get('productId')));",
+                  "pm.expect(product, 'product should exist').to.not.be.undefined;",
+                  "const expected = Number(pm.collectionVariables.get('productStock')) - 1;",
+                  "pm.test('Product stock restored by compensation', () => pm.expect(Number(product.stock)).to.eql(expected));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check slot released (compensation)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/delivery/slots",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "delivery",
+                "slots"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const slots = pm.response.json();",
+                  "const slot = slots.find(s => s.id === Number(pm.collectionVariables.get('slotIdFail')));",
+                  "pm.expect(slot, 'slot should exist').to.not.be.undefined;",
+                  "pm.test('Slot released, reserved = 0', () => pm.expect(Number(slot.reserved)).to.eql(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Order — not enough stock (failed)",
+      "item": [
+        {
+          "name": "Create order (failed, quantity > stock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": {{orderPriceOk}},\n  \"product_id\": {{productId}},\n  \"quantity\": {{orderQtyExceed}},\n  \"slot_id\": {{slotId}}\n}"
+            },
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/order",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "order"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "pm.test('Order status is failed', () => pm.expect(json.status).to.eql('failed'));",
+                  "pm.collectionVariables.set('orderIdFailStock', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check balance unchanged after stock failure",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/billing/account",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "account"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "const expected = Number(pm.collectionVariables.get('initialBalance')) - Number(pm.collectionVariables.get('orderPriceOk'));",
+                  "pm.test('Balance unchanged after stock failure', () => pm.expect(Number(json.balance)).to.eql(expected));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Notifications",
+      "item": [
+        {
+          "name": "Check notification (ORDER_SUCCESS)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/notification",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notification"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const expectedType = 'ORDER_SUCCESS';",
+                  "const attempt = Number(pm.collectionVariables.get('notificationAttemptSuccess') || 0);",
+                  "const notifications = pm.response.json();",
+                  "const found = notifications.find(n => n.message_type === expectedType && n.status === 'SENT');",
+                  "if (found || attempt >= 10) {",
+                  "  pm.collectionVariables.unset('notificationAttemptSuccess');",
+                  "  pm.expect(notifications.length).to.be.greaterThan(0);",
+                  "  pm.expect(found, expectedType + ' notification should exist').to.not.be.undefined;",
+                  "} else {",
+                  "  pm.collectionVariables.set('notificationAttemptSuccess', attempt + 1);",
+                  "  setTimeout(() => postman.setNextRequest(pm.info.requestName), 1000);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check notification (ORDER_FAILED)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://{{baseUrl}}/api/v1/notification",
+              "protocol": "http",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notification"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "console.log('REQUEST:', pm.info.requestName, pm.request.method, pm.request.url.toString());",
+                  "try {",
+                  "  console.log('REQUEST BODY:', pm.request.body.raw);",
+                  "} catch (e) {",
+                  "  console.log('REQUEST BODY: <none>');",
+                  "}",
+                  "console.log('RESPONSE:', pm.response.code, pm.response.text());",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const expectedType = 'ORDER_FAILED';",
+                  "const attempt = Number(pm.collectionVariables.get('notificationAttemptFailed') || 0);",
+                  "const notifications = pm.response.json();",
+                  "const found = notifications.find(n => n.message_type === expectedType && n.status === 'SENT');",
+                  "if (found || attempt >= 10) {",
+                  "  pm.collectionVariables.unset('notificationAttemptFailed');",
+                  "  pm.expect(notifications.length).to.be.greaterThan(0);",
+                  "  pm.expect(found, expectedType + ' notification should exist').to.not.be.undefined;",
+                  "} else {",
+                  "  pm.collectionVariables.set('notificationAttemptFailed', attempt + 1);",
+                  "  setTimeout(() => postman.setNextRequest(pm.info.requestName), 1000);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
