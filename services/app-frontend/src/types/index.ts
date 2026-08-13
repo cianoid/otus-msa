@@ -49,11 +49,40 @@ export interface Order {
   username: string
   price: string
   status: 'paid' | 'failed'
+  product_id: number | null
+  quantity: number | null
+  slot_id: number | null
   created_at: string
 }
 
 export interface OrderCreate {
   price: string
+  product_id: number
+  quantity: number
+  slot_id: number
+}
+
+export interface Product {
+  id: number
+  name: string
+  stock: number
+}
+
+export interface ProductCreate {
+  name: string
+  stock: number
+}
+
+export interface DeliverySlot {
+  id: number
+  time_slot: string
+  capacity: number
+  reserved: number
+}
+
+export interface DeliverySlotCreate {
+  time_slot: string
+  capacity: number
 }
 
 export interface Notification {

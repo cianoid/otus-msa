@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, Numeric, String, func
+from sqlalchemy import Column, DateTime, Integer, Numeric, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -14,5 +14,8 @@ class OrderDB(Base):
     username = Column(String, nullable=False, index=True)
     price = Column(Numeric(18, 2), nullable=False)
     status = Column(String, nullable=False)
+    product_id = Column(Integer, nullable=True)
+    quantity = Column(Integer, nullable=True)
+    slot_id = Column(Integer, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

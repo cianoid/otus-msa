@@ -16,6 +16,15 @@ kubectl create configmap pg-init-scripts --namespace postgres --from-file=infra/
 helm upgrade postgres infra/postgres --install --namespace postgres --values infra/postgres/values.yaml
 ```
 
+#### Создание БД для новых сервисов
+```shell
+kubectl exec -n postgres postgres-0 -- psql -U postgres -c "CREATE DATABASE app_warehouse OWNER dba;"
+kubectl exec -n postgres postgres-0 -- psql -U postgres -c "CREATE DATABASE app_delivery OWNER dba;"
+kubectl exec -n postgres postgres-0 -- psql -U postgres -d app_warehouse -c "GRANT ALL PRIVILEGES ON SCHEMA public TO dba;"
+kubectl exec -n postgres postgres-0 -- psql -U postgres -d app_delivery -c "GRANT ALL PRIVILEGES ON SCHEMA public TO dba;"
+```
+
+
 #### Получить доступ к БД
 ```shell
 minikube service postgres -n postgres --url
@@ -68,7 +77,7 @@ helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx
 
 ## Установка приложения
 
-Приложение устанавливается в namespace **`default`** (задан в `helmfile.yaml.gotmpl` для всех 6 релизов).
+Приложение устанавливается в namespace **`default`** (задан в `helmfile.yaml.gotmpl` для всех 8 релизов).
 
 ```shell
 # если изменился код
@@ -93,11 +102,13 @@ npm run dev
 ### Сервисы
 
 - `app-auth` — регистрация/логин, публикует `user.create`.
-- `app-user` — профиль пользователя, слушает `user.create`.
 - `app-billing` — счёт пользователя (`deposit`, `withdraw`), слушает `user.create`.
-- `app-order` — создание заказа, синхронно вызывает `app-billing/withdraw`, публикует `message.send.email`.
-- `app-notification` — слушает `message.send.email`, сохраняет письмо в БД.
+- `app-delivery` — доставка.
 - `app-frontend` — React SPA с личным кабинетом (профиль, баланс, заказы, уведомления).
+- `app-notification` — слушает `message.send.email`, сохраняет письмо в БД.
+- `app-order` — создание заказа, синхронно вызывает `app-billing/withdraw`, публикует `message.send.email`. Оркестратор Саги в части заказа товара: резервирует товар, затем курьера и после списывает деньги. При отказе любого из шагов начинается запуск компенсационных шагов
+- `app-user` — профиль пользователя, слушает `user.create`.
+- `app-warehouse` — склад. 
 
 ## Архитектура взаимодействия сервисов
 

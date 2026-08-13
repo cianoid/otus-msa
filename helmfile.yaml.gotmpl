@@ -26,6 +26,24 @@ releases:
       - name: image.tag
         value: {{ .StateValues.app_billing.image.tag | default "fallback" }}
 
+  - name: app-warehouse
+    namespace: default
+    chart: ./charts/chart-app-warehouse
+    values:
+      - ./charts/chart-app-warehouse/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_warehouse.image.tag | default "fallback" }}
+
+  - name: app-delivery
+    namespace: default
+    chart: ./charts/chart-app-delivery
+    values:
+      - ./charts/chart-app-delivery/values.yaml
+    set:
+      - name: image.tag
+        value: {{ .StateValues.app_delivery.image.tag | default "fallback" }}
+
   - name: app-order
     namespace: default
     chart: ./charts/chart-app-order

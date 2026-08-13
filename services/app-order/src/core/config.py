@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     # ── Service URLs (internal cluster DNS) ─────────────────
     billing_service_url: str = "http://app-billing.default.svc.cluster.local:80"
     user_service_url: str = "http://app-user.default.svc.cluster.local:80"
+    warehouse_service_url: str = "http://app-warehouse.default.svc.cluster.local:80"
+    delivery_service_url: str = "http://app-delivery.default.svc.cluster.local:80"
 
 
 settings = Settings()
