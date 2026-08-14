@@ -87,4 +87,8 @@ env:
         key: JWT_SECRET
   - name: KAFKA_BOOTSTRAP_SERVERS
     value: {{ .Values.kafka.bootstrapServers | default "kafka.kafka:9092" | quote }}
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: {{ .Values.otel.endpoint | default "http://jaeger-collector.jaeger.svc.cluster.local:4318" | quote }}
+  - name: OTEL_SERVICE_NAME
+    value: {{ include "app.name" . | quote }}
 {{- end -}}

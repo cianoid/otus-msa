@@ -1,7 +1,7 @@
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -10,6 +10,7 @@ from src.api import main_router, notification_router
 from src.core.config import settings
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
+from src.core.tracing import setup_tracing
 from src.crud import get_notification_crud
 from src.kafka import KafkaClient
 from src.services.email import EmailService
@@ -44,6 +45,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 app = FastAPI(title="Notification API", lifespan=lifespan)
+setup_tracing(service_name="notification", app=app)
 
 app.include_router(main_router)
 app.include_router(notification_router)

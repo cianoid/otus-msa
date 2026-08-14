@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 from src.core.config import settings
 from src.core.enums import MessageStatus, MessageSubjects, MessageTypes
 from src.core.logger import log
+from src.core.tracing import start_span
 from src.crud import NotificationCRUD
 
 
@@ -46,30 +47,31 @@ class EmailService:
 
         Returns True on success, False on failure.
         """
-        for attempt in range(3):
-            smtp = SMTP(hostname=settings.smtp_host, port=settings.smtp_port, use_tls=settings.smtp_use_tls)
-            try:
-                await smtp.connect()
-                if settings.smtp_user:
-                    await smtp.login(settings.smtp_user, settings.smtp_password)
-                message = self._build_message(email, subject, body)
-                await smtp.send_message(message)
-                log.info("SMTP: message sent to %s (subject=%r)", email, subject)
-                return True
-            except SMTPException as err:
-                log.error("SMTP: failed to send to %s (attempt %s): %s", email, attempt + 1, err)
-            except Exception as err:
-                log.exception("SMTP: unexpected error sending to %s (attempt %s): %s", email, attempt + 1, err)
-            finally:
+        with start_span("smtp.send", attributes={"smtp.recipient": email, "smtp.subject": subject}):
+            for attempt in range(3):
+                smtp = SMTP(hostname=settings.smtp_host, port=settings.smtp_port, use_tls=settings.smtp_use_tls)
                 try:
-                    await smtp.quit()
-                except Exception:
-                    pass
-            if attempt < 2:
-                await asyncio.sleep(1)
+                    await smtp.connect()
+                    if settings.smtp_user:
+                        await smtp.login(settings.smtp_user, settings.smtp_password)
+                    message = self._build_message(email, subject, body)
+                    await smtp.send_message(message)
+                    log.info("SMTP: message sent to %s (subject=%r)", email, subject)
+                    return True
+                except SMTPException as err:
+                    log.error("SMTP: failed to send to %s (attempt %s): %s", email, attempt + 1, err)
+                except Exception as err:
+                    log.exception("SMTP: unexpected error sending to %s (attempt %s): %s", email, attempt + 1, err)
+                finally:
+                    try:
+                        await smtp.quit()
+                    except Exception:
+                        pass
+                if attempt < 2:
+                    await asyncio.sleep(1)
 
-        log.error("SMTP: giving up sending to %s after 3 attempts", email)
-        return False
+            log.error("SMTP: giving up sending to %s after 3 attempts", email)
+            return False
 
     async def send(
         self, notification_id: UUID, message_type: MessageTypes, email: str, username: str, data: dict
@@ -78,42 +80,52 @@ class EmailService:
         the result.  *email* is required in *kwargs* and is popped before
         rendering so it remains the recipient, not a template variable."""
 
-        item = await self._crud.get_one(notification_id)
+        with start_span(
+            "notification.process",
+            attributes={
+                "notification.id": str(notification_id),
+                "notification.type": message_type.value,
+                "notification.username": username,
+            },
+        ):
+            item = await self._crud.get_one(notification_id)
 
-        if item is not None:
-            if item.status == MessageStatus.READY_TO_SEND:
-                log.warning("%s: Something strange with notification. Status is %s", notification_id, item.status)
-                return
-            if item.status == MessageStatus.ERROR:
-                log.warning(
-                    "%s: Probably we should resend message, but we don't. Status is %s", notification_id, item.status
-                )
-                return
-            if item.status == MessageStatus.SENT:
+            if item is not None:
+                if item.status == MessageStatus.READY_TO_SEND:
+                    log.warning("%s: Something strange with notification. Status is %s", notification_id, item.status)
+                    return
+                if item.status == MessageStatus.ERROR:
+                    log.warning(
+                        "%s: Probably we should resend message, but we don't. Status is %s",
+                        notification_id,
+                        item.status,
+                    )
+                    return
+                if item.status == MessageStatus.SENT:
+                    return
+
+            await self._crud.add_new_message(
+                notification_id=notification_id, username=username, email=email, message_type=message_type
+            )
+
+            template_name = f"{message_type}.html"
+            try:
+                template = self._env.get_template(template_name)
+            except TemplateNotFound:
+                log.warning("%s: Template not found: %s — skipping", notification_id, template_name)
+                await self._crud.update_message_error(notification_id)
                 return
 
-        await self._crud.add_new_message(
-            notification_id=notification_id, username=username, email=email, message_type=message_type
-        )
+            subject = MessageSubjects[message_type].value
+            data.update({"username": username, "email": email, "subject": subject})
+            body: str = template.render(**data)
+            await self._crud.update_message_with_data(notification_id, subject=subject, body=body)
 
-        template_name = f"{message_type}.html"
-        try:
-            template = self._env.get_template(template_name)
-        except TemplateNotFound:
-            log.warning("%s: Template not found: %s — skipping", notification_id, template_name)
+            if await self._send_email(email, subject, body):
+                await self._crud.update_message_success(notification_id)
+                log.info("%s: Email sent", notification_id)
+                return
+
             await self._crud.update_message_error(notification_id)
+            log.error("%s: Email not sent", notification_id)
             return
-
-        subject = MessageSubjects[message_type].value
-        data.update({"username": username, "email": email, "subject": subject})
-        body: str = template.render(**data)
-        await self._crud.update_message_with_data(notification_id, subject=subject, body=body)
-
-        if await self._send_email(email, subject, body):
-            await self._crud.update_message_success(notification_id)
-            log.info("%s: Email sent", notification_id)
-            return
-
-        await self._crud.update_message_error(notification_id)
-        log.error("%s: Email not sent", notification_id)
-        return

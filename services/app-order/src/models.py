@@ -17,5 +17,6 @@ class OrderDB(Base):
     product_id = Column(Integer, nullable=True)
     quantity = Column(Integer, nullable=True)
     slot_id = Column(Integer, nullable=True)
+    error = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

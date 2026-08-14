@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from src.core.tracing import start_span
 from src.crud import AccountCRUD, get_account_crud
 from src.schemes import Account, DepositRequest, WithdrawRequest, WithdrawResponse
 from src.services.verify import VerifyBearer
@@ -14,10 +15,11 @@ async def get_account(
     account_crud: AccountCRUD = Depends(get_account_crud),
 ):
     username = payload.get("sub", "")
-    account = await account_crud.get_account(username)
-    if account is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Account not found")
-    return Account(username=account.username, balance=account.balance)
+    with start_span("billing.get_account", attributes={"billing.username": username}):
+        account = await account_crud.get_account(username)
+        if account is None:
+            raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Account not found")
+        return Account(username=account.username, balance=account.balance)
 
 
 @router.post("/deposit", response_model=Account, status_code=HTTP_200_OK)
@@ -27,12 +29,15 @@ async def deposit(
     account_crud: AccountCRUD = Depends(get_account_crud),
 ):
     username = payload.get("sub", "")
-    account = await account_crud.get_account(username)
-    if account is None:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Account not found")
+    with start_span(
+        "billing.deposit", attributes={"billing.username": username, "billing.amount": str(request.amount)}
+    ):
+        account = await account_crud.get_account(username)
+        if account is None:
+            raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Account not found")
 
-    account = await account_crud.deposit(username, request.amount)
-    return Account(username=account.username, balance=account.balance)
+        account = await account_crud.deposit(username, request.amount)
+        return Account(username=account.username, balance=account.balance)
 
 
 @router.post("/withdraw", response_model=WithdrawResponse, status_code=HTTP_200_OK)
@@ -42,11 +47,14 @@ async def withdraw(
     account_crud: AccountCRUD = Depends(get_account_crud),
 ):
     username = payload.get("sub", "")
-    account = await account_crud.withdraw(username, request.amount)
-    if account is None:
-        existing = await account_crud.get_account(username)
-        if existing is None:
-            raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Account not found")
-        return WithdrawResponse(success=False, balance=existing.balance)
+    with start_span(
+        "billing.withdraw", attributes={"billing.username": username, "billing.amount": str(request.amount)}
+    ):
+        account = await account_crud.withdraw(username, request.amount)
+        if account is None:
+            existing = await account_crud.get_account(username)
+            if existing is None:
+                raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Account not found")
+            return WithdrawResponse(success=False, balance=existing.balance)
 
-    return WithdrawResponse(success=True, balance=account.balance)
+        return WithdrawResponse(success=True, balance=account.balance)

@@ -3,9 +3,11 @@ from __future__ import annotations
 import asyncio
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRecord
+from opentelemetry import trace
 from orjson import orjson
 from src.core.config import settings
 from src.core.logger import log
+from src.core.tracing import kafka_inject_headers, start_span
 
 _consumer_task: asyncio.Task[None] | None = None
 
@@ -70,7 +72,9 @@ class KafkaClient:
 
         try:
             log.info("%s: About to send message to %s with data=%s", msg.key, topic, msg.value)
-            await self.producer.send_and_wait(topic=topic, value=msg.value, key=msg.key)
+            headers = list(msg.headers) if msg.headers else []
+            headers.extend(kafka_inject_headers())
+            await self.producer.send_and_wait(topic=topic, value=msg.value, key=msg.key, headers=headers)
         except Exception as err:
             log.error("Error while sending message to topic %s: %s", topic, err)
         else:
@@ -104,11 +108,24 @@ class KafkaClient:
                 message_type,
                 settings.kafka_send_email_topic,
             )
-            await self.producer.send_and_wait(
-                topic=settings.kafka_send_email_topic,
-                key=notification_id,
-                value=value,
-            )
+            headers = kafka_inject_headers()
+            with start_span(
+                "kafka.produce",
+                kind=trace.SpanKind.PRODUCER,
+                attributes={
+                    "messaging.system": "kafka",
+                    "messaging.destination": settings.kafka_send_email_topic,
+                    "messaging.destination_kind": "topic",
+                    "messaging.operation": "send",
+                    "messaging.kafka.message_key": notification_id,
+                },
+            ):
+                await self.producer.send_and_wait(
+                    topic=settings.kafka_send_email_topic,
+                    key=notification_id,
+                    value=value,
+                    headers=headers,
+                )
         except Exception as err:
             log.error("Error while sending notification to %s: %s", settings.kafka_send_email_topic, err)
         else:

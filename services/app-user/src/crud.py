@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as postgres_upsert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from src.core.tracing import start_span
 from src.db import AsyncSessionLocal
 from src.models import UserDB
 from src.schemes import UserUpdate
@@ -25,15 +26,16 @@ class BaseCRUD:
 
 class UserCRUD(BaseCRUD):
     async def get_or_create_user(self, username: str) -> UserDB:
-        async with self.session() as session:
-            user_db = await session.get(UserDB, username)
+        with start_span("db.user.get_or_create", attributes={"user.username": username}):
+            async with self.session() as session:
+                user_db = await session.get(UserDB, username)
 
-            if user_db is None:
-                user_db = UserDB(username=username)
-                session.add(user_db)
-                await session.commit()
+                if user_db is None:
+                    user_db = UserDB(username=username)
+                    session.add(user_db)
+                    await session.commit()
 
-            return user_db
+                return user_db
 
     async def get_or_update_user(self, username: str, user_update: UserUpdate | None = None) -> UserDB:
         """Insert or update a user row.  Fields carried by *user_update* are
@@ -44,23 +46,24 @@ class UserCRUD(BaseCRUD):
             update_fields = user_update.model_dump(exclude_unset=True)
 
         values: dict[str, object] = {"username": username, **update_fields}
-        # On conflict we always update: when *update_fields* is empty the SET
+        # On conflict we always update: when *user_update* is empty the SET
         # clause is a single no-op assignment on the PK column itself.
         set_clause: dict[str, object] = update_fields if update_fields else {"username": username}
 
-        async with self.session() as session:
-            stmt = (
-                postgres_upsert(UserDB)
-                .values(**values)
-                .on_conflict_do_update(
-                    index_elements=[UserDB.username],
-                    set_=set_clause,
+        with start_span("db.user.get_or_update", attributes={"user.username": username}):
+            async with self.session() as session:
+                stmt = (
+                    postgres_upsert(UserDB)
+                    .values(**values)
+                    .on_conflict_do_update(
+                        index_elements=[UserDB.username],
+                        set_=set_clause,
+                    )
+                    .returning(UserDB)
                 )
-                .returning(UserDB)
-            )
-            result = await session.execute(stmt)
-            await session.commit()
-            return result.scalar_one()
+                result = await session.execute(stmt)
+                await session.commit()
+                return result.scalar_one()
 
 
 def get_user_crud() -> UserCRUD:

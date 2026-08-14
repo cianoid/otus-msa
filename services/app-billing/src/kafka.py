@@ -6,8 +6,10 @@ import asyncio
 import json
 
 from aiokafka import AIOKafkaConsumer
+from opentelemetry import trace
 from src.core.config import settings
 from src.core.logger import log
+from src.core.tracing import TRACER, kafka_extract_context, start_span
 from src.crud import AccountCRUD
 
 _consumer: AIOKafkaConsumer | None = None
@@ -36,21 +38,38 @@ async def _consume_loop(
 
     try:
         async for msg in consumer:
-            payload: dict[str, str] = msg.value
-            username = payload.get("username")
+            ctx = kafka_extract_context(msg.headers)
+            with TRACER.start_as_current_span(
+                "kafka.consume",
+                context=ctx,
+                kind=trace.SpanKind.CONSUMER,
+                attributes={
+                    "messaging.system": "kafka",
+                    "messaging.destination": topic,
+                    "messaging.destination_kind": "topic",
+                    "messaging.operation": "process",
+                    "messaging.kafka.consumer_group": settings.app_title,
+                    "messaging.kafka.message_key": msg.key.decode("utf-8") if msg.key else None,
+                    "messaging.kafka.partition": msg.partition,
+                    "messaging.kafka.offset": msg.offset,
+                },
+            ):
+                payload: dict[str, str] = msg.value
+                username = payload.get("username")
 
-            if not username:
-                log.warning("Skipping user.create message without username: %s", payload)
-                await consumer.commit()
-                continue
+                if not username:
+                    log.warning("Skipping user.create message without username: %s", payload)
+                    await consumer.commit()
+                    continue
 
-            try:
-                await crud.create_account(username)
-                await consumer.commit()
-                log.info("Created billing account: username=%s", username)
-            except Exception:
-                log.exception("Failed to create billing account: username=%s", username)
-                continue  # do not commit offset on failure
+                try:
+                    with start_span("billing.create_account_from_kafka", attributes={"billing.username": username}):
+                        await crud.create_account(username)
+                    await consumer.commit()
+                    log.info("Created billing account: username=%s", username)
+                except Exception:
+                    log.exception("Failed to create billing account: username=%s", username)
+                    continue  # do not commit offset on failure
 
     except asyncio.CancelledError:
         log.info("Kafka consumer loop cancelled")
