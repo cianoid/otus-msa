@@ -16,12 +16,12 @@ kubectl create configmap pg-init-scripts --namespace postgres --from-file=infra/
 helm upgrade postgres infra/postgres --install --namespace postgres --values infra/postgres/values.yaml
 ```
 
-#### Создание БД для новых сервисов
+#### Создание БД для новых сервисов (если БД уже есть)
 ```shell
-kubectl exec -n postgres postgres-0 -- psql -U postgres -c "CREATE DATABASE app_warehouse OWNER dba;"
-kubectl exec -n postgres postgres-0 -- psql -U postgres -c "CREATE DATABASE app_delivery OWNER dba;"
-kubectl exec -n postgres postgres-0 -- psql -U postgres -d app_warehouse -c "GRANT ALL PRIVILEGES ON SCHEMA public TO dba;"
-kubectl exec -n postgres postgres-0 -- psql -U postgres -d app_delivery -c "GRANT ALL PRIVILEGES ON SCHEMA public TO dba;"
+kubectl exec -n postgres postgres-0 -- psql -U dba -c "CREATE DATABASE app_warehouse1 OWNER dba;"
+kubectl exec -n postgres postgres-0 -- psql -U dba -c "CREATE DATABASE app_delivery OWNER dba;"
+kubectl exec -n postgres postgres-0 -- psql -U dba -d app_warehouse -c "GRANT ALL PRIVILEGES ON SCHEMA public TO dba;"
+kubectl exec -n postgres postgres-0 -- psql -U dba -d app_delivery -c "GRANT ALL PRIVILEGES ON SCHEMA public TO dba;"
 ```
 
 
@@ -36,9 +36,12 @@ kubectl create namespace prometheus
 helm upgrade prometheus prometheus/kube-prometheus-stack --install --namespace prometheus --values infra/prometheus/values.yaml
 ```
 
-#### Прописать локальный домен
+#### Прописать локальные домены
 ```shell
+sudo echo '127.0.0.1 arch.homework' >> /etc/hosts
 sudo echo '127.0.0.1 grafana.local' >> /etc/hosts
+sudo echo '127.0.0.1 prometheus.local' >> /etc/hosts
+sudo echo '127.0.0.1 jaeger.local' >> /etc/hosts
 ```
 
 #### Вытащить пароль админа
@@ -67,13 +70,34 @@ kubectl delete namespace kafka
 
 ### Установка API Gateway (из папки nginx-ingress-controller): 
 ```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+kubectl create namespace ingress-nginx
 helm upgrade ingress-nginx ingress-nginx/ingress-nginx \
   --namespace ingress-nginx \
+  --install \
   --reuse-values \
   --values infra/nginx-ingress-controller/values.yaml
-
-helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --create-namespace --values values.yaml
 ```
+
+### Установка Jaeger
+
+```shell
+kubectl apply -f infra/jaeger/namespace.yaml
+kubectl apply -f infra/jaeger/deployment.yaml
+kubectl apply -f infra/jaeger/service.yaml
+```
+
+Подождать пару минут и запустить Ingress (иначе манифест не применяется)
+```shell
+kubectl apply -f infra/jaeger/ingress.yaml
+```
+
+#### Прописать локальный домен
+
+UI Jaeger будет доступен по адресу `http://jaeger.local`.
+
+Бэкенд-сервисы уже настроены на экспорт трассировок в `http://jaeger-collector.jaeger.svc.cluster.local:4318` через значение `otel.endpoint` в Helm-чартах (по умолчанию задано в `values.yaml`).
 
 ## Установка приложения
 

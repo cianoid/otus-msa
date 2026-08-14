@@ -16,6 +16,9 @@ image:
 kafka:
   bootstrapServers: my-cluster-kafka-bootstrap.kafka:9092
 
+otel:
+  endpoint: http://jaeger-collector.jaeger.svc.cluster.local:4318
+
 smtp:
   host: "smtp.masterhost.ru"
   port: 465

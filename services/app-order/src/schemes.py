@@ -21,6 +21,7 @@ class Order(BaseModel):
     quantity: int | None = None
     slot_id: int | None = None
     created_at: dt.datetime
+    error: str | None = None
 
     class Config:
         from_attributes = True

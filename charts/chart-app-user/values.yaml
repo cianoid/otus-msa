@@ -16,6 +16,9 @@ image:
 kafka:
   bootstrapServers: my-cluster-kafka-bootstrap.kafka:9092
 
+otel:
+  endpoint: http://jaeger-collector.jaeger.svc.cluster.local:4318
+
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types

@@ -2,7 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from src.core.logger import log
 from src.crud import UserCRUD, get_user_crud
 from src.kafka import KafkaClient, get_kafka
-from src.schemes import TokenPair, TokenRefresh, TokenVerify, TokenVerifyResponse, UserCreate, UserLogin
+from src.schemes import (
+    TokenPair,
+    TokenRefresh,
+    TokenVerify,
+    TokenVerifyResponse,
+    UserCreate,
+    UserLogin,
+)
 from src.services.auth import (
     create_access_token,
     create_refresh_token,

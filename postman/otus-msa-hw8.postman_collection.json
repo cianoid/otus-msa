@@ -694,7 +694,7 @@
                   "  console.log('REQUEST BODY: <none>');",
                   "}",
                   "console.log('RESPONSE:', pm.response.code, pm.response.text());",
-                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
                   "const json = pm.response.json();",
                   "pm.test('Order status is failed', () => pm.expect(json.status).to.eql('failed'));",
                   "pm.collectionVariables.set('orderIdFailMoney', json.id);"
@@ -893,7 +893,7 @@
                   "  console.log('REQUEST BODY: <none>');",
                   "}",
                   "console.log('RESPONSE:', pm.response.code, pm.response.text());",
-                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
                   "const json = pm.response.json();",
                   "pm.test('Order status is failed', () => pm.expect(json.status).to.eql('failed'));",
                   "pm.collectionVariables.set('orderIdFailStock', json.id);"

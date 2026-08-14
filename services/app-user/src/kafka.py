@@ -6,6 +6,7 @@ from aiokafka import AIOKafkaConsumer, AIOKafkaProducer, ConsumerRecord
 from orjson import orjson
 from src.core.config import settings
 from src.core.logger import log
+from src.core.tracing import kafka_inject_headers
 
 _consumer_task: asyncio.Task[None] | None = None
 
@@ -70,7 +71,9 @@ class KafkaClient:
 
         try:
             log.info("%s: About to send message to %s with data=%s", msg.key, topic, msg.value)
-            await self.producer.send_and_wait(topic=topic, value=msg.value, key=msg.key)
+            headers = list(msg.headers) if msg.headers else []
+            headers.extend(kafka_inject_headers())
+            await self.producer.send_and_wait(topic=topic, value=msg.value, key=msg.key, headers=headers)
         except Exception as err:
             log.error("Error while sending message to topic_to_consume %s: %s", topic, err)
         else:

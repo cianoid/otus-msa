@@ -1,6 +1,6 @@
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
@@ -10,6 +10,7 @@ from src.api import auth_router, main_router
 from src.core.config import settings
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
+from src.core.tracing import setup_tracing
 from src.crud import UserCRUD, get_user_crud
 from src.db import AsyncSessionLocal
 from src.kafka import KafkaClient, get_kafka
@@ -42,10 +43,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 app = FastAPI(title="Auth API", lifespan=lifespan)
+setup_tracing(service_name="auth", app=app)
 
 
 @app.get(path="/", include_in_schema=False)
-def index(req: Request) -> RedirectResponse:  # noqa: D103
+def index(req: Request) -> RedirectResponse:
     return RedirectResponse(str(req.base_url) + "docs")
 
 
