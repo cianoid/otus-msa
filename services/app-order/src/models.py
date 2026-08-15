@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, Integer, Numeric, String, func
+from sqlalchemy import Column, DateTime, Integer, Numeric, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -9,6 +9,7 @@ Base = declarative_base()
 
 class OrderDB(Base):
     __tablename__ = "orders"
+    __table_args__ = (UniqueConstraint("username", "idempotency_key", name="uq_orders_username_idempotency_key"),)
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4, nullable=False)
     username = Column(String, nullable=False, index=True)
@@ -18,5 +19,6 @@ class OrderDB(Base):
     quantity = Column(Integer, nullable=True)
     slot_id = Column(Integer, nullable=True)
     error = Column(String, nullable=True)
+    idempotency_key = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

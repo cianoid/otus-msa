@@ -36,6 +36,7 @@ class OrderCRUD(BaseCRUD):
         quantity: int | None = None,
         slot_id: int | None = None,
         error: str | None = None,
+        idempotency_key: str | None = None,
     ) -> OrderDB:
         with start_span(
             "db.order.create_order",
@@ -57,6 +58,7 @@ class OrderCRUD(BaseCRUD):
                     quantity=quantity,
                     slot_id=slot_id,
                     error=error,
+                    idempotency_key=idempotency_key,
                 )
                 if order_id is not None:
                     order.id = order_id
@@ -64,6 +66,19 @@ class OrderCRUD(BaseCRUD):
                 await session.commit()
                 await session.refresh(order)
                 return order
+
+    async def get_by_idempotency_key(self, username: str, idempotency_key: str) -> OrderDB | None:
+        with start_span(
+            "db.order.get_by_idempotency_key",
+            attributes={"order.username": username, "order.idempotency_key": idempotency_key},
+        ):
+            async with self.session() as session:
+                stmt = select(OrderDB).where(
+                    OrderDB.username == username,
+                    OrderDB.idempotency_key == idempotency_key,
+                )
+                result = await session.execute(stmt)
+                return result.scalars().one_or_none()
 
     async def get_order(self, order_id: UUID) -> OrderDB | None:
         with start_span("db.order.get_order", attributes={"order.id": str(order_id)}):

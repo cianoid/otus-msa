@@ -22,6 +22,7 @@ class Order(BaseModel):
     slot_id: int | None = None
     created_at: dt.datetime
     error: str | None = None
+    idempotency_key: str | None = None
 
     class Config:
         from_attributes = True
