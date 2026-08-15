@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Order as app-order (оркестратор)
+    participant DB as PostgreSQL
+    participant Saga as Участники саги<br/>(warehouse/delivery/billing)
+
+    rect rgb(240, 255, 240)
+        Note over Client, Saga: Первый запрос с Idempotency-Key — сага выполняется
+        Client->>Order: POST /api/v1/order<br/>Idempotency-Key: K<br/>{price, product_id, quantity, slot_id}
+        Order->>DB: SELECT ... WHERE username AND idempotency_key = K
+        DB-->>Order: not found
+        Order->>Saga: reserve → reserve → withdraw
+        Saga-->>Order: success
+        Order->>DB: INSERT order (status = paid, idempotency_key = K)<br/>UNIQUE(username, idempotency_key)
+        Order-->>Client: 201 + order (status = paid)
+    end
+
+    rect rgb(240, 240, 255)
+        Note over Client, Saga: Повтор с тем же ключом — сага НЕ выполняется
+        Client->>Order: POST /api/v1/order<br/>Idempotency-Key: K<br/>(то же тело)
+        Order->>DB: SELECT ... WHERE username AND idempotency_key = K
+        DB-->>Order: order (status = paid)
+        Order-->>Client: 201 + сохранённый заказ (тот же id)
+        Note over Client, Saga: Побочные эффекты не повторяются:<br/>деньги, сток и слот списаны один раз
+    end
+
+    rect rgb(255, 245, 230)
+        Note over Client, Saga: Гонка двух дублей с одним ключом
+        Client->>Order: POST /api/v1/order (Idempotency-Key: K) ×2 параллельно
+        Order->>DB: INSERT order (idempotency_key = K)
+        DB-->>Order: ok (первый) / UNIQUE violation (второй)
+        Note over Order: Второй запрос ловит IntegrityError,<br/>перечитывает заказ победителя
+        Order-->>Client: оба получают один и тот же заказ
+    end

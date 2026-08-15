@@ -92,7 +92,11 @@ export const orderApi = {
   create: (data: OrderCreate): Promise<Order> =>
     fetch(`${API_BASE}/order`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': crypto.randomUUID(),
+        ...getAuthHeaders(),
+      },
       body: JSON.stringify(data),
     }).then((res) => handleResponse<Order>(res)),
 }

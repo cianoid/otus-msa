@@ -1,8 +1,9 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from src.core.logger import log
 from src.core.tracing import set_span_error, start_span
 from src.crud import OrderCRUD, get_order_crud
@@ -36,6 +37,7 @@ async def list_orders(
 async def create_order(
     request: OrderCreate,
     req: Request,
+    idempotency_key: str = Header(...),
     kafka: KafkaClient = Depends(get_kafka),
     payload: dict = Depends(security),
     order_crud: OrderCRUD = Depends(get_order_crud),
@@ -43,6 +45,15 @@ async def create_order(
     username = payload.get("sub", "")
     token = _extract_token(req)
     http_client = ServiceClient()
+
+    # Idempotency: replay stored response for an already-processed key.
+    existing = await order_crud.get_by_idempotency_key(username, idempotency_key)
+    if existing is not None:
+        log.info("idempotency: replay for key %s, order %s", idempotency_key, existing.id)
+        return JSONResponse(
+            status_code=HTTP_201_CREATED if existing.status == "paid" else HTTP_409_CONFLICT,
+            content=jsonable_encoder(Order.model_validate(existing)),
+        )
 
     order_id = uuid4()
     success = False
@@ -134,16 +145,27 @@ async def create_order(
             # Persist order.
             with start_span("saga.persist_order"):
                 status = "paid" if success else "failed"
-                order = await order_crud.create_order(
-                    username,
-                    request.price,
-                    status,
-                    order_id=order_id,
-                    product_id=request.product_id,
-                    quantity=request.quantity,
-                    slot_id=request.slot_id,
-                    error=error,
-                )
+                try:
+                    order = await order_crud.create_order(
+                        username,
+                        request.price,
+                        status,
+                        order_id=order_id,
+                        product_id=request.product_id,
+                        quantity=request.quantity,
+                        slot_id=request.slot_id,
+                        error=error,
+                        idempotency_key=idempotency_key,
+                    )
+                except IntegrityError:
+                    # A concurrent request with the same idempotency key won the race:
+                    # return the order it persisted instead of duplicating side effects.
+                    log.info("idempotency: concurrent duplicate for key %s", idempotency_key)
+                    order = await order_crud.get_by_idempotency_key(username, idempotency_key)
+                    return JSONResponse(
+                        status_code=HTTP_201_CREATED if order.status == "paid" else HTTP_409_CONFLICT,
+                        content=jsonable_encoder(Order.model_validate(order)),
+                    )
 
             # Fetch user profile for email.
             with start_span("saga.fetch_user_profile"):

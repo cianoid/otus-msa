@@ -142,3 +142,5 @@ npm run dev
   - `message.send.email` (`app-order` → `app-notification`) — письмо о результате заказа.
 
 Схема взаимодействия сервисов: [docs/hw7-architecture.png](docs/hw7-architecture.png) (исходник Mermaid: [docs/hw7-architecture.mermaid](docs/hw7-architecture.mermaid)).
+
+сдкл
