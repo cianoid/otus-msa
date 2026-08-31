@@ -26,5 +26,10 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     jwt_algorithm: str = "HS256"
 
+    # ── Redis ──────────────────────────────────────────────
+    redis_host: str = "redis.redis"
+    redis_port: int = 6379
+    cache_ttl_seconds: int = 300
+
 
 settings = Settings()

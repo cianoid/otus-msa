@@ -128,6 +128,8 @@ class KafkaClient:
                 )
         except Exception as err:
             log.error("Error while sending notification to %s: %s", settings.kafka_send_email_topic, err)
+            # Re-raise so the outbox worker retries instead of marking the entry processed.
+            raise
         else:
             log.info("%s: Sent notification %s to %s", notification_id, message_type, settings.kafka_send_email_topic)
 

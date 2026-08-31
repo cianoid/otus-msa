@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "load-test": "k6 run infra/prometheus/test_config.js",
+    "load-test:quick": "k6 run -e VUS=5 -e DURATION=30s -e RAMP_UP=10s -e RAMP_DOWN=10s infra/prometheus/test_config.js"
   },
   "repository": {
     "type": "git",

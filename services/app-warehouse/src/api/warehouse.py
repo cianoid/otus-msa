@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
+from starlette.status import HTTP_200_OK, HTTP_201_CREATED
+
 from src.core.tracing import start_span
 from src.crud import WarehouseCRUD, get_warehouse_crud
 from src.schemes import (
@@ -10,7 +12,6 @@ from src.schemes import (
     ReserveResponse,
 )
 from src.services.verify import VerifyBearer
-from starlette.status import HTTP_200_OK, HTTP_201_CREATED
 
 router = APIRouter(prefix="/api/v1/warehouse", tags=["warehouse"])
 security = VerifyBearer()
@@ -40,6 +41,7 @@ async def create_product(
 @router.post("/reserve", response_model=ReserveResponse, status_code=HTTP_200_OK)
 async def reserve(
     request: ReserveRequest,
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     payload: dict = Depends(security),
     warehouse_crud: WarehouseCRUD = Depends(get_warehouse_crud),
 ):
@@ -49,20 +51,25 @@ async def reserve(
             "order.id": request.order_id,
             "warehouse.product_id": request.product_id,
             "warehouse.quantity": request.quantity,
+            "idempotency_key": x_idempotency_key,
         },
     ):
-        reservation, stock = await warehouse_crud.reserve(request.order_id, request.product_id, request.quantity)
-        if reservation is None:
-            return ReserveResponse(success=False, reservation_id=None, stock=stock)
-        return ReserveResponse(success=True, reservation_id=reservation.id, stock=stock)
+        result = await warehouse_crud.idempotent_reserve(
+            x_idempotency_key, request.order_id, request.product_id, request.quantity
+        )
+        return ReserveResponse(**result)
 
 
 @router.post("/cancel", response_model=CancelResponse, status_code=HTTP_200_OK)
 async def cancel(
     request: CancelRequest,
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     payload: dict = Depends(security),
     warehouse_crud: WarehouseCRUD = Depends(get_warehouse_crud),
 ):
-    with start_span("warehouse.cancel", attributes={"warehouse.reservation_id": request.reservation_id}):
-        success = await warehouse_crud.cancel(request.reservation_id)
-        return CancelResponse(success=success)
+    with start_span(
+        "warehouse.cancel",
+        attributes={"warehouse.reservation_id": request.reservation_id, "idempotency_key": x_idempotency_key},
+    ):
+        result = await warehouse_crud.idempotent_cancel(x_idempotency_key, request.reservation_id)
+        return CancelResponse(**result)

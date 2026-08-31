@@ -1,6 +1,21 @@
 ## Database configuration (from https://groundhog2k.github.io/helm-charts/)
 postgres:
   enabled: true
+  ## Кастомный образ с pg_partman (infra/postgres/docker/Dockerfile):
+  ##   docker build -t postgres-partman:18 infra/postgres/docker
+  ##   minikube image load postgres-partman:18
+  image:
+    repository: "postgres-partman"
+    tag: "18"
+  ## Фоновый воркер pg_partman: держит premake=2 пустых секций вперёд
+  ## для orders в БД app_order (конфигурация — миграция 006 app-order).
+  args:
+    - "-c"
+    - "shared_preload_libraries=pg_partman_bgw"
+    - "-c"
+    - "pg_partman_bgw.dbname=app_order"
+    - "-c"
+    - "pg_partman_bgw.interval=3600"
   extraScripts: "pg-init-scripts"
   service:
     type: NodePort

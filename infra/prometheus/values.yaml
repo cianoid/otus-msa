@@ -333,13 +333,104 @@ defaultRules:
 
 ## Provide custom recording or alerting rules to be deployed into the cluster.
 ##
-additionalPrometheusRulesMap: {}
-#  rule-name:
-#    groups:
-#    - name: my_group
-#      rules:
-#      - record: my_record
-#        expr: 100 * my_record
+additionalPrometheusRulesMap:
+  otus-slo-sli:
+    groups:
+      - name: otus_slo_sli
+        interval: 15s
+        rules:
+          # SLI: API latency P95 over the last 5 minutes (milliseconds).
+          - record: slo:api_latency_p95_5m
+            expr: |
+              histogram_quantile(
+                0.95,
+                sum by (le) (
+                  rate(
+                    http_request_duration_seconds_bucket{
+                      handler!~"/|/liveness|/metrics|/readiness|/docs|/openapi.json",
+                      status=~"2.*"
+                    }[5m]
+                  )
+                )
+              ) * 1000
+          # SLI: API error rate over the last 5 minutes.
+          - record: slo:api_error_rate_5m
+            expr: |
+              sum(
+                rate(
+                  http_requests_total{
+                    status=~"5.*",
+                    handler!~"/metrics|/liveness|/readiness|/docs|/openapi.json"
+                  }[5m]
+                )
+              )
+              /
+              sum(
+                rate(
+                  http_requests_total{
+                    handler!~"/metrics|/liveness|/readiness|/docs|/openapi.json"
+                  }[5m]
+                )
+              )
+          # SLI: order failure rate over the last 5 minutes.
+          - record: slo:order_failure_rate_5m
+            expr: |
+              sum(rate(orders_total{status="failed"}[5m]))
+              /
+              sum(rate(orders_total{status="created"}[5m]))
+          # SLI: maximum Kafka consumer lag per consumer group.
+          - record: slo:kafka_consumer_max_lag
+            expr: max by(group) (kafka_consumergroup_lag)
+  otus-business-alerts:
+    groups:
+      - name: otus_business_alerts
+        interval: 15s
+        rules:
+          # Business alert: too many orders are failing.
+          - alert: OrderFailureRateHigh
+            expr: slo:order_failure_rate_5m > 0.05
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High order failure rate"
+              description: "Order failure rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+          # Business alert: Kafka consumer lag is too high.
+          - alert: KafkaConsumerLagHigh
+            expr: slo:kafka_consumer_max_lag > 1000
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Kafka consumer lag is high"
+              description: "Consumer group {{ $labels.group }} has a lag of {{ $value }} messages."
+          # Business alert: compensations are being produced.
+          - alert: OrderCompensationRateHigh
+            expr: sum(rate(order_compensations_total[5m])) > 0.1
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Order compensation rate is high"
+              description: "Compensation rate is {{ $value }}/s over the last 5 minutes."
+          # Business alert: messages moved to the outbox DLQ.
+          - alert: OutboxDLQMessages
+            expr: sum(rate(outbox_dlq_messages_total[5m])) > 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Outbox messages moved to DLQ"
+              description: "{{ $value }} messages/sec are entering the outbox DLQ."
+          # Business alert: too many pending outbox messages.
+          - alert: OutboxPendingMessagesHigh
+            expr: sum by(kind) (outbox_pending_messages) > 100
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Too many pending outbox messages"
+              description: "{{ $labels.kind }} has {{ $value }} pending outbox messages."
 
 ##
 global:
@@ -584,8 +675,18 @@ alertmanager:
       - receiver: 'null'
         matchers:
           - alertname = "Watchdog"
+      # Route application/business alerts to the 'events' receiver.
+      - receiver: 'events'
+        matchers:
+          - severity =~ "warning|critical"
+        continue: true
     receivers:
     - name: 'null'
+    - name: 'events'
+      webhook_configs:
+        - url: 'http://app-notification.default.svc.cluster.local:80/api/v1/notification/alerts/events'
+          send_resolved: true
+          # NOTE: replace the URL above with your real incident-management endpoint.
     templates:
     - '/etc/alertmanager/config/*.tmpl'
 
@@ -1612,7 +1713,11 @@ grafana:
         handleGrafanaManagedAlerts: false
         implementation: prometheus
 
-  extraConfigmapMounts: []
+  extraConfigmapMounts:
+    - name: grafana-alerting
+      mountPath: /etc/grafana/provisioning/alerting
+      configMap: grafana-alerting
+      readOnly: true
   # - name: certs-configmap
   #   mountPath: /etc/grafana/ssl/
   #   configMap: certs-configmap

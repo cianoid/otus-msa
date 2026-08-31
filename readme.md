@@ -31,10 +31,14 @@ minikube service postgres -n postgres --url
 ```
 
 ### Установка Prometheus + Grafana
+
 ```shell
 kubectl create namespace prometheus
 helm upgrade prometheus prometheus/kube-prometheus-stack --install --namespace prometheus --values infra/prometheus/values.yaml
 ```
+
+Настройка алертов, SLO/SLI и Kafka Exporter описана в
+[infra/prometheus/readme.md](infra/prometheus/readme.md).
 
 #### Прописать локальные домены
 ```shell
@@ -50,11 +54,13 @@ kubectl --namespace prometheus get secrets prometheus-grafana -o jsonpath="{.dat
 ```
 
 ### Установка Kafka
+
 ```shell
 kubectl create namespace kafka
 kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
 kubectl get pod -n kafka --watch
-kubectl apply -f https://strimzi.io/examples/latest/kafka/kafka-single-node.yaml -n kafka
+kubectl apply -f infra/kafka/kafka-cluster.yaml
+kubectl apply -f infra/kafka/kafka-exporter-servicemonitor.yaml
 kubectl wait kafka/my-cluster --for=condition=Ready --timeout=300s -n kafka
 ```
 

@@ -1,6 +1,7 @@
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as postgres_upsert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from src.cache import CacheClient
 from src.core.tracing import start_span
 from src.db import AsyncSessionLocal
 from src.models import UserDB
@@ -25,7 +26,21 @@ class BaseCRUD:
 
 
 class UserCRUD(BaseCRUD):
+    def __init__(self, sessionmaker: async_sessionmaker[AsyncSession], cache: CacheClient | None = None) -> None:
+        super().__init__(sessionmaker)
+        self.cache = cache
+
+    @staticmethod
+    def _profile_cache_key(username: str) -> str:
+        return f"user:profile:{username}"
+
     async def get_or_create_user(self, username: str) -> UserDB:
+        cache_key = self._profile_cache_key(username)
+        if self.cache is not None:
+            cached = await self.cache.get_json(cache_key)
+            if cached is not None:
+                return UserDB(**cached)
+
         with start_span("db.user.get_or_create", attributes={"user.username": username}):
             async with self.session() as session:
                 user_db = await session.get(UserDB, username)
@@ -35,7 +50,12 @@ class UserCRUD(BaseCRUD):
                     session.add(user_db)
                     await session.commit()
 
-                return user_db
+        if self.cache is not None:
+            await self.cache.set_json(
+                cache_key,
+                {"username": user_db.username, "email": user_db.email, "telegram": user_db.telegram},
+            )
+        return user_db
 
     async def get_or_update_user(self, username: str, user_update: UserUpdate | None = None) -> UserDB:
         """Insert or update a user row.  Fields carried by *user_update* are
@@ -63,7 +83,11 @@ class UserCRUD(BaseCRUD):
                 )
                 result = await session.execute(stmt)
                 await session.commit()
-                return result.scalar_one()
+                user_db = result.scalar_one()
+
+        if self.cache is not None:
+            await self.cache.delete(self._profile_cache_key(username))
+        return user_db
 
 
 def get_user_crud() -> UserCRUD:

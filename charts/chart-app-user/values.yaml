@@ -16,6 +16,10 @@ image:
 kafka:
   bootstrapServers: my-cluster-kafka-bootstrap.kafka:9092
 
+redis:
+  host: redis.redis
+  port: 6379
+
 otel:
   endpoint: http://jaeger-collector.jaeger.svc.cluster.local:4318
 

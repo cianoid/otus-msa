@@ -21,6 +21,7 @@ class Order(BaseModel):
     quantity: int | None = None
     slot_id: int | None = None
     created_at: dt.datetime
+    updated_at: dt.datetime | None = None
     error: str | None = None
     idempotency_key: str | None = None
 

@@ -33,5 +33,10 @@ class Settings(BaseSettings):
     kafka_user_create_topic: str = "user.create"
     kafka_user_create_topic_dlq: str = "user.create.dlq"
 
+    # ── Redis ──────────────────────────────────────────────
+    redis_host: str = "redis.redis"
+    redis_port: int = 6379
+    cache_ttl_seconds: int = 60
+
 
 settings = Settings()

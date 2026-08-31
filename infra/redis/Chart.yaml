@@ -1,0 +1,14 @@
+apiVersion: v2
+name: redis
+description: A Helm chart for Redis (in-cluster cache)
+
+type: application
+
+version: 0.1.0
+appVersion: "8.10"
+
+dependencies:
+  - name: redis
+    version: "2.4.6" # Уточните версию через: helm search repo groundhog2k/redis
+    repository: "https://groundhog2k.github.io/helm-charts/"
+    condition: redis.enabled

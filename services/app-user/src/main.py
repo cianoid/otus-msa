@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_fastapi_instrumentator import metrics as prom_metrics
 from src.api import main_router, user_router
+from src.cache import CacheClient
 from src.core.config import settings
 from src.core.const import CUSTOM_BUCKETS
 from src.core.logger import log
@@ -31,7 +32,8 @@ logging.getLogger("uvicorn.access").addFilter(_HealthFilter())
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    crud = UserCRUD(AsyncSessionLocal)
+    cache = CacheClient(settings.redis_host, settings.redis_port, settings.cache_ttl_seconds)
+    crud = UserCRUD(AsyncSessionLocal, cache)
     app.dependency_overrides[get_user_crud] = crud
     kafka_client = KafkaClient(
         bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -42,6 +44,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await start_main_process(kafka_client, crud)
     log.info("API Started")
     yield
+    await cache.close()
     log.warning("API Stopped")
     return
 

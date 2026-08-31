@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
+from starlette.status import HTTP_200_OK, HTTP_201_CREATED
+
 from src.core.tracing import start_span
 from src.crud import DeliveryCRUD, get_delivery_crud
 from src.schemes import (
@@ -10,7 +12,6 @@ from src.schemes import (
     SlotCreateRequest,
 )
 from src.services.verify import VerifyBearer
-from starlette.status import HTTP_200_OK, HTTP_201_CREATED
 
 router = APIRouter(prefix="/api/v1/delivery", tags=["delivery"])
 security = VerifyBearer()
@@ -41,25 +42,32 @@ async def create_slot(
 @router.post("/reserve", response_model=ReserveResponse, status_code=HTTP_200_OK)
 async def reserve(
     request: ReserveRequest,
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     payload: dict = Depends(security),
     delivery_crud: DeliveryCRUD = Depends(get_delivery_crud),
 ):
     with start_span(
         "delivery.reserve",
-        attributes={"order.id": request.order_id, "delivery.slot_id": request.slot_id},
+        attributes={
+            "order.id": request.order_id,
+            "delivery.slot_id": request.slot_id,
+            "idempotency_key": x_idempotency_key,
+        },
     ):
-        reservation = await delivery_crud.reserve(request.order_id, request.slot_id)
-        if reservation is None:
-            return ReserveResponse(success=False, reservation_id=None)
-        return ReserveResponse(success=True, reservation_id=reservation.id)
+        result = await delivery_crud.idempotent_reserve(x_idempotency_key, request.order_id, request.slot_id)
+        return ReserveResponse(**result)
 
 
 @router.post("/cancel", response_model=CancelResponse, status_code=HTTP_200_OK)
 async def cancel(
     request: CancelRequest,
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     payload: dict = Depends(security),
     delivery_crud: DeliveryCRUD = Depends(get_delivery_crud),
 ):
-    with start_span("delivery.cancel", attributes={"delivery.reservation_id": request.reservation_id}):
-        success = await delivery_crud.cancel(request.reservation_id)
-        return CancelResponse(success=success)
+    with start_span(
+        "delivery.cancel",
+        attributes={"delivery.reservation_id": request.reservation_id, "idempotency_key": x_idempotency_key},
+    ):
+        result = await delivery_crud.idempotent_cancel(x_idempotency_key, request.reservation_id)
+        return CancelResponse(**result)

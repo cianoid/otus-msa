@@ -1,0 +1,455 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: otus-msa alerts
+    folder: alerts
+    interval: 1m
+    rules:
+      - uid: otus-msa-latency-p95
+        title: API Latency P95 High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: |
+                histogram_quantile(
+                  0.95,
+                  sum by (le) (
+                    rate(
+                      http_request_duration_seconds_bucket{
+                        handler!~"/|/liveness|/metrics|/readiness|/docs|/openapi.json",
+                        status=~"2.*"
+                      }[5m]
+                    )
+                  )
+                ) * 1000
+              hide: false
+              instant: false
+              intervalMs: 1000
+              legendFormat: P95
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 300
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        keepFiringFor: 2m
+        annotations:
+          summary: API P95 latency is high
+          description: API P95 latency is {{ $values.B }} ms for the last 5 minutes.
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: events
+      - uid: otus-msa-latency-p99
+        title: API Latency P99 High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: |
+                histogram_quantile(
+                  0.99,
+                  sum by (le) (
+                    rate(
+                      http_request_duration_seconds_bucket{
+                        handler!~"/|/liveness|/metrics|/readiness|/docs|/openapi.json",
+                        status=~"2.*"
+                      }[5m]
+                    )
+                  )
+                ) * 1000
+              hide: false
+              instant: false
+              intervalMs: 1000
+              legendFormat: P99
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 500
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        keepFiringFor: 2m
+        annotations:
+          summary: API P99 latency is high
+          description: API P99 latency is {{ $values.B }} ms for the last 5 minutes.
+        labels:
+          severity: critical
+        notification_settings:
+          receiver: events
+      - uid: otus-msa-error-rate
+        title: API Error Rate High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: |
+                sum(
+                  rate(
+                    http_requests_total{
+                      status=~"5.*",
+                      handler!~"/metrics|/liveness|/readiness|/docs|/openapi.json"
+                    }[5m]
+                  )
+                )
+              hide: false
+              instant: false
+              intervalMs: 1000
+              legendFormat: 5xx rate
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        keepFiringFor: 2m
+        annotations:
+          summary: API 5xx error rate is high
+          description: API 5xx error rate is {{ $values.B }}/s for the last 5 minutes.
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: events
+      - uid: otus-msa-kafka-lag
+        title: Kafka Consumer Lag High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: max by(consumergroup) (kafka_consumergroup_lag)
+              hide: false
+              instant: false
+              intervalMs: 1000
+              legendFormat: "{{ consumergroup }}"
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1000
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        keepFiringFor: 2m
+        annotations:
+          summary: Kafka consumer lag is high
+          description: Consumer group {{ $labels.consumergroup }} has a lag of {{ $values.B }} messages.
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: events
+      - uid: otus-msa-order-failure-rate
+        title: Order Failure Rate High
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: |
+                sum(rate(orders_total{status="failed"}[5m]))
+                /
+                sum(rate(orders_total{status="created"}[5m]))
+              hide: false
+              instant: false
+              intervalMs: 1000
+              legendFormat: failure rate
+              maxDataPoints: 43200
+              range: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.05
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params: []
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                name: Expression
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        keepFiringFor: 2m
+        annotations:
+          summary: Order failure rate is high
+          description: Order failure rate is {{ $values.B | humanizePercentage }} over the last 5 minutes.
+        labels:
+          severity: warning
+        notification_settings:
+          receiver: events

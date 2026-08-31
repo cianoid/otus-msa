@@ -1,0 +1,29 @@
+## Redis configuration (from https://groundhog2k.github.io/helm-charts/)
+redis:
+  enabled: true
+  ## Кэш не требует персистентности: standalone Deployment без PVC
+  useDeploymentWhenNonHA: true
+  service:
+    type: ClusterIP
+    serverPort: 6379
+  ## Метрики redis_exporter в существующий Prometheus
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: prometheus
+      interval: 15s
+  ## Redis внутри кластера без auth (как и postgres с authMethod: trust)
+  customLivenessProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - redis-cli ping | grep -q PONG
+  customReadinessProbe:
+    exec:
+      command:
+        - sh
+        - -c
+        - redis-cli ping | grep -q PONG
